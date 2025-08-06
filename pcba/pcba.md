@@ -6,6 +6,8 @@ Go to [jlcpcb](https://jlcpcb.com) and select *Add gerber file*
 
 ![Add gerber](/pics/01_add_gerber_file.png)
 
+<br/>
+
 Check gerber is correctly imported
 
 ![Check gerber](/pics/02_check_data.png)
