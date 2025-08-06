@@ -1,0 +1,41 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "run mdl",
+			"type": "shell",
+			"dependsOn": [
+			],
+			"command": "java -jar ./bin/mdl.jar src/menu_main.asm -dialect asmsx-zilog -so -po -do -popotential -+bin -warn-unofficial -warn-ambiguous",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": {
+				"applyTo": "allDocuments",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}"
+				],
+				"pattern": [
+					{
+						"regexp": "^(\\w+): (.+) in (.+)#([0-9]+): (.+)$",
+						"file": 3,
+						"line": 4,
+						"severity": 1,
+						"message": 5,
+						"code": 2
+					}
+				]
+			},
+			"presentation": {
+				"echo": false,
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": true,
+				"revealProblems": "onProblem"
+			}
+		}
+	]
+}
