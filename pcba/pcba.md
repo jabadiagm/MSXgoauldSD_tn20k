@@ -15,10 +15,10 @@ Enable PCB Assembly
 ![Enable Assembly](/pics/03_enable_pcb_assembly.png)
 
 Set following options:
-*PCBA Type* = *Economic*
-*Assembly Side* = *Bottom Side*
-*PCBA Qty* = 5 or 2 (how many assembled boards) 
-*Confirm Parts Placement* = *Yes*
++ *PCBA Type* = *Economic*
++ *Assembly Side* = *Bottom Side*
++ *PCBA Qty* = 5 or 2 (how many assembled boards) 
++ *Confirm Parts Placement* = *Yes*
 
 The latter will get design inspected for correct locations and polarities
 
