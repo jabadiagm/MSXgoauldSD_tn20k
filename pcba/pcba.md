@@ -68,7 +68,7 @@ Check price and select *SAVE TO CART*
 
 ![Check price](/pics/15_check_price.png)
 
-Select allworks (pcb manufacturing + pcb assembly) and then *Secure Checkout*
+Select all works (pcb manufacturing + pcb assembly) and then *Secure Checkout*
 
 ![Checkout](/pics/16_checkout.png)
 
