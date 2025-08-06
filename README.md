@@ -19,7 +19,7 @@ MSX2+ engine in Z80 socket. It turns one MSX into an MSX2+ by replacing Z80 proc
 
 Old boards V1.4 and V4.1 are compatible with Goa'uld SD. V3 is not supported, owners of V3 should use Goa'uld standard firmware (0.80).
 
-New pcb V1.5 is same as 1.4, optimized for online PCB assembly. See [Assembly guide](/blob/main/pcba.md)
+New pcb V1.5 is same as 1.4, optimized for online PCB assembly. See [Assembly guide](/pcba/pcba.md)
 
 
 ## Slot map
