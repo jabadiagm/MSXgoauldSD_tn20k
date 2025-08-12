@@ -1,6 +1,10 @@
 ## PCB Assembly guide
 
-Follow these steps to get Goa'uld V1.5 pcb's with components assembled using jlcpcb online service
+Goa'uld board is composed by some smd components and through hole headers. Smd chips are located in the bottom. Using a low profile header for tang is recommended, solder tang to board only when space is too tight.
+
+![Goa'uld V1.5](/pics/bottom.png)
+
+Follow these steps to get Goa'uld V1.5 pcb's with smd components assembled using jlcpcb online service
 
 Go to [jlcpcb](https://jlcpcb.com) and select *Add gerber file*
 
