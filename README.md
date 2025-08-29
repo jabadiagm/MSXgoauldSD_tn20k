@@ -24,12 +24,14 @@ New pcb V1.5 is same as 1.4, optimized for online PCB assembly. See [Assembly gu
 
 ## Slot map
 
-![Slot map](/pics/mapa_slots3.png)
+Slot map has been updated to improve compatibility without requiring changes.
 
-Mapper and megaram can be relocated to slots 1, 2, or 3 using config menu.
+![Slot map](/pics/mapa_slots4.png)
+
+Mapper and megaram can be relocated to slots 1 or 2 using config menu.
 
 ## Megaram + Sofarun
-Megaram is detected automatically by sofarun using default settings. When using other software you may need to indicate location, Slot 0-2 by default.
+Megaram is detected automatically by sofarun using default settings. When using other software you may need to indicate location, Slot 3-3 by default.
 
 
 ## Configuration
@@ -40,10 +42,9 @@ Config menu is showed pressing g during MSX logo. New improved menu is created b
 * Enable Mapper: On by default. Disable when having compatibility issues or to use a different mapper
 * Enable Megaram: On by default. Disable when having compatibility issues or to use a different megaram
 * Enable SD: On by default. Disable when using an external SD mapper
-* Mapper Slot: 0 by default. Change to 1-3 to get mapper in a not expanded slot (best compatibility). Physical slot will be disabled
-* Megaram Slot: 0 by default. Change to 1-3 to get megaram in a not expanded slot (best compatibility). Physical slot will be disabled
-* SD Bios Slot: 3 by default. Change to 1-2 to free slot 3. Physical slot will be disabled
-* Ghost SCC: Off by default. Enable to get sound from an SCC cartridge located in slot 1-3
+* Mapper Slot: 3 by default. Change to 1 or 2 to get mapper in a not expanded slot. Physical slot will be disabled
+* Megaram Slot: 3 by default. Change to 1 or 2 to get megaram in a not expanded slot. Physical slot will be disabled
+* Ghost SCC: Off by default. Enable to get sound from an SCC cartridge located in physical slot 1 or 2
 * Enable Scanlines: On by default. Disable to get a clean hdmi picture
 * Slow Device: Off by default. Enable if you experience crashes / unstabilities
 * Save & Exit: store new config and continue, changes in mapper settings will be effective after pressing reset
@@ -51,8 +52,7 @@ Config menu is showed pressing g during MSX logo. New improved menu is created b
 
 ## Known issues
 * Reset from config menu is not compatible with some hardware. Use physical reset button when possible
-* Multimente: shows garbage characters. Move internal mapper to slots 1, 2 or 3
-* Tape games fail: move internal mapper to slots 1, 2 or 3
+* Tape games fail: use poke -1,0
 * Carnivore C2+ is not compatible with Slow Device mode
 
 

@@ -79,7 +79,7 @@ module memory_ctrl (
             case ( sdram_seq )
                 3'd0 : begin
                     sdram_write <= 0;
-                    if ( mapper_req == 1 || megaram_req == 1 )begin
+                    if  ( ( mapper_req == 1 || megaram_req == 1 ) && ( video_dlclk == 1 && video_dhclk == 1 ) ) begin
                         sdram_seq <= 3'd1;
                     end
                 end
@@ -105,7 +105,7 @@ module memory_ctrl (
                 end
                 3'd2 : begin
                     enable_sdram <= 1;
-                    if ( video_dlclk == 0 && video_dhclk == 1 ) begin
+                    if ( video_dlclk == 0 && video_dhclk == 0 ) begin
                         sdram_write <= 0;
                         sdram_seq <= 3'd3;
                     end

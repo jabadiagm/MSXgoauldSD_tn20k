@@ -106,7 +106,7 @@ set_false_path -from [get_clocks {clock_27m}] -to [get_pins {vdp4/hdmi_ntsc/true
 
 //set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {xffl_s0/D}] 9.6
 //set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {cpu_din_*/D}] 30.0
-set_max_delay -from [get_clocks {clock_54m}] -to [get_pins {cpu_din_*/D}] 19.0
+set_max_delay -from [get_clocks {clock_54m}] -to [get_pins {cpu_din_*/D}] 20.7
 //set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {SdrAdr_*/D}] 16.5
 //set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {SdrBa_*/D}] 20.0
 //set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {SdrUdq_*/D}] 20.0
@@ -114,7 +114,7 @@ set_max_delay -from [get_clocks {clock_54m}] -to [get_pins {cpu_din_*/D}] 19.0
 //set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {RamDbi_*/D}] 16.5
 //set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {VrmDbi2_*/D}] 16.5
 //set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {VrmDbi2_*/Q}] 16.5
-set_max_delay -from [get_pins {mem1/vram_dout_*/Q}] -to [get_clocks {clock_27m}] 11.5
+set_max_delay -from [get_pins {mem1/vram_dout_*/Q}] -to [get_clocks {clock_27m}] 10.5
 //set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {memory_ctrl/enable_read_seq*/D}] 11.0
 //set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {memory_ctrl/enable_write_seq*/D}] 11.0
 //set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {memory_ctrl/vram/u_sdram/FF_SDRAM_A*/D}] 12.0

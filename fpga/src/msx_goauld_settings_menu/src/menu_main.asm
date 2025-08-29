@@ -57,6 +57,11 @@ ENDIF ;ENABLE_SDCARD
 	call POSIT						; BIOS setCursor
 	ld   hl,menuTitleStr
 	call print_string
+	; clear area
+	ld   a, #00
+	ld   bc, 240
+	ld   hl, #0800
+	call FILVRM	
 	; Top header line
 	ld   a, #ff
 	ld   bc, 30
@@ -270,6 +275,7 @@ selected_mapper:
 	call .selected_on_off
 	or   a
 	ret  nz
+	ld   a, 3
 	ld   (var_mapslt), a
 	ret
 
@@ -279,6 +285,7 @@ selected_megaRam:
 	call .selected_on_off
 	or   a
 	ret  nz
+	ld   a, 3
 	ld   (var_megslt), a
 	ret
 ENDIF ;ENABLE_MEGARAM
@@ -287,12 +294,12 @@ IFDEF ENABLE_SDCARD
 selected_sdCard:
 	ld   hl, var_sdcard
 	call .selected_on_off
-	or   a
-	ret  z
-	ld   a, (var_sdcslt)
-	dec  a
-	ld   (var_sdcslt), a
-	call selected_sdCardSlot
+;	or   a
+;	ret  z
+;	ld   a, (var_sdcslt)
+;	dec  a
+;	ld   (var_sdcslt), a
+;	call selected_sdCardSlot
 	ret
 ENDIF ;ENABLE_SDCARD
 
@@ -320,34 +327,40 @@ selected_mapperSlot:
 	ret  z
 IFDEF ENABLE_MEGARAM
 	ld   a, (var_megslt)				; Increase slot if not used by MegaRam nor SD Card
+	cp   3
+	jr   nz, .mp_skip
+	xor  a
+.mp_skip:
 	ld   b, a
 ENDIF ;ENABLE_MEGARAM
-IFDEF ENABLE_SDCARD
-	ld   a, (var_sdcslt)
-	ld   c, a
-ENDIF ;ENABLE_SDCARD
+;IFDEF ENABLE_SDCARD
+;	ld   a, (var_sdcslt)
+;	ld   c, a
+;ENDIF ;ENABLE_SDCARD
 	ld   a, (var_mapslt)
 .mp_used:
 	inc  a
+.mp_no_inc:
 IFDEF ENABLE_MEGARAM
 	cp   b
 	jr   z, .mp_used
 ENDIF ;ENABLE_MEGARAM
-IFDEF ENABLE_SDCARD
-	ld   d, a
-	ld   a, (var_sdcard)				; If disabled then skip
-	or   a
-	ld   a, d
-	jr   z, .mapperSlot_check
-	cp   c
-	jr   z, .mp_used
-	
-ENDIF ;ENABLE_SDCARD
+;IFDEF ENABLE_SDCARD
+;	ld   d, a
+;	ld   a, (var_sdcard)				; If disabled then skip
+;	or   a
+;	ld   a, d
+;	jr   z, .mapperSlot_check
+;	cp   c
+;	jr   z, .mp_used
+;	
+;ENDIF ;ENABLE_SDCARD
 
 .mapperSlot_check:
 	cp   4
 	jr   nz, .mp_no4
-	xor  a
+	ld   a, #1
+	jr   .mp_no_inc
 .mp_no4:
 	ld   (var_mapslt), a
 	ret
@@ -358,30 +371,36 @@ selected_megaRamSlot:
 	or   a
 	ret  z
 	ld   a, (var_mapslt)				; Increase slot if not used by Mapper nor SD Card
+	cp   3
+	jr   nz, .mr_skip
+	xor  a
+.mr_skip:
 	ld   b, a
-IFDEF ENABLE_SDCARD
-	ld   a, (var_sdcslt)
-	ld   c, a
-ENDIF ;ENABLE_SDCARD
+;IFDEF ENABLE_SDCARD
+;	ld   a, (var_sdcslt)
+;	ld   c, a
+;ENDIF ;ENABLE_SDCARD
 	ld   a, (var_megslt)
 .mr_used:
 	inc  a
+.mr_no_inc:
 	cp   b
 	jr   z, .mr_used
-IFDEF ENABLE_SDCARD
-	ld   d, a
-	ld   a, (var_sdcard)				; If disabled then skip
-	or   a
-	ld   a, d
-	jr   z, .megaramSlot_check
-	cp   c
-	jr   z, .mr_used
-ENDIF
+;IFDEF ENABLE_SDCARD
+;	ld   d, a
+;	ld   a, (var_sdcard)				; If disabled then skip
+;	or   a
+;	ld   a, d
+;	jr   z, .megaramSlot_check
+;	cp   c
+;	jr   z, .mr_used
+;ENDIF
 
 .megaramSlot_check:
 	cp   4
 	jr   nz, .mr_no4
-	xor  a
+	ld   a, #1
+	jr   .mr_no_inc
 .mr_no4:
 	ld   (var_megslt), a
 	ret
@@ -389,6 +408,7 @@ ENDIF ;ENABLE_MEGARAM
 
 IFDEF ENABLE_SDCARD
 selected_sdCardSlot:
+	ret
 	ld   a, (var_sdcard)				; If disabled then don't modify
 	or   a
 	ret  z
@@ -555,12 +575,12 @@ print_selection:
 ; ############## Constants
 
 menuTitleStr:
-	.db "MSX Goa'uld Settings Menu v1.21",0
+	.db "MSX Goa'uld Settings Menu v1.22",0
 enableMapperStr:
 	.db "Enable Mapper",0
 IFDEF ENABLE_MEGARAM
 enableMegaRamStr:
-	.db "Enable MegaRam",0
+	.db "Enable MegaRam SCC",0
 ENDIF ;ENABLE_MEGARAM
 IFDEF ENABLE_SDCARD
 enableSDStr:
