@@ -12,6 +12,10 @@ Go to [jlcpcb](https://jlcpcb.com) and select *Add gerber file*
 
 <br/>
 
+Upload file *gerber.zip*
+
+![Upload Gerber](/pics/01b_add_gerber_file.png)
+
 Check gerber is correctly imported
 
 ![Check gerber](/pics/02_check_data.png)
