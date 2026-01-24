@@ -26,8 +26,6 @@ New pcb V1.5 is same as 1.4, optimized for online PCB assembly. See [Assembly gu
 
 ## Slot map
 
-Slot map has been updated to improve compatibility without requiring changes.
-
 ![Slot map](/pics/mapa_slots5.png)
 
 Mapper and megaram can be relocated to slots 1 or 2 using config menu.
@@ -55,12 +53,12 @@ Config menu is showed pressing g during MSX logo. New improved menu is created b
 ## Known issues
 * Reset from config menu is not compatible with some hardware. Use physical reset button when possible
 * Tape games fail: use poke -1,0
-* Carnivore C2+ and Megaflashrom SCC+ SD are not compatible with Compatible mode
+* Carnivore C2+ and Megaflashrom SCC+ SD are not compatible with Compatible mode (yes, I know)
 * Wifi unreliable: place ESP at appropiate distance from Tang
 
 
 ## Flashing
-Progamming is done in two steps:
+Programming is done in two steps:
 * Flash firmware Z80_goauld.fs  
 
 ![Flash1a](/pics/flashing1a.png)
