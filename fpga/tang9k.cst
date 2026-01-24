@@ -43,8 +43,6 @@ IO_LOC "ex_bus_data[0]" 19;
 IO_PORT "ex_bus_data[0]" IO_TYPE=LVCMOS33;
 IO_LOC "ex_bus_data_reverse_n" 18;
 IO_PORT "ex_bus_data_reverse_n" PULL_MODE=UP IO_TYPE=LVCMOS33;
-//IO_LOC "ex_bus_data_reverse" 77;
-//IO_PORT "ex_bus_data_reverse"  IO_TYPE=LVCMOS33;
 IO_LOC "ex_bus_mreq_n" 52;
 IO_PORT "ex_bus_mreq_n"  IO_TYPE=LVCMOS33;
 IO_LOC "ex_bus_iorq_n" 53;
@@ -53,8 +51,6 @@ IO_LOC "ex_bus_rd_n" 71;
 IO_PORT "ex_bus_rd_n"  IO_TYPE=LVCMOS33;
 IO_LOC "ex_bus_wr_n" 72;
 IO_PORT "ex_bus_wr_n"  IO_TYPE=LVCMOS33;
-//IO_LOC "entradas[20]" 79;
-//IO_PORT "entradas[20]"  IO_TYPE=LVCMOS33;
 IO_LOC "ex_bus_reset_n" 86;
 IO_PORT "ex_bus_reset_n" PULL_MODE=UP IO_TYPE=LVCMOS33;
 IO_LOC "ex_bus_clk_3m6" 49;
@@ -88,9 +84,9 @@ IO_PORT "data_p[2]" PULL_MODE=NONE DRIVE=4;
 IO_LOC "clk_p" 33,34;
 IO_PORT "clk_p" PULL_MODE=NONE DRIVE=4;
 
-//uart
-IO_LOC "uart_tx" 69;
-IO_PORT "uart_tx"  IO_TYPE=LVCMOS33 DRIVE=4;
+//usb uart
+IO_LOC "usb_uart_tx" 69;
+IO_PORT "usb_uart_tx"  IO_TYPE=LVCMOS33 DRIVE=4;
 
 //flash
 IO_LOC  "mspi_cs" 60;
@@ -115,3 +111,9 @@ IO_LOC  "sd_dat2" 80;
 IO_PORT "sd_dat2" IO_TYPE=LVCMOS33;
 IO_LOC  "sd_dat3" 81;
 IO_PORT "sd_dat3" IO_TYPE=LVCMOS33;
+
+//wifi
+IO_LOC "uart_rx" 77;
+IO_PORT "uart_rx" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "uart_tx" 79;
+IO_PORT "uart_tx"  IO_TYPE=LVCMOS33;

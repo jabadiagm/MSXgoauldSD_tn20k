@@ -2,14 +2,14 @@
 <GAO_CONFIG>
     <Version>3.0</Version>
     <Mode>Standard</Mode>
-    <AoCore index="0" sample_clock="clk_54m" trig_type="0" storage_depth="512" window_num="1" capture_amount="256" implementation="0" trigger_pos="100" module_name="top" force_trigger_by_falling_edge="false">
+    <AoCore index="0" sample_clock="clk_54m" trig_type="0" storage_depth="512" window_num="1" capture_amount="512" implementation="0" trigger_pos="50" module_name="top" force_trigger_by_falling_edge="false">
         <SignalList>
             <Signal>clk_27m</Signal>
-            <Signal>ex_bus_clk_3m6</Signal>
             <Signal>bus_clk_3m6</Signal>
-            <Signal>bus_clk_3m6_54</Signal>
             <Signal>clk_enable_3m6_54</Signal>
             <Signal>clk_falling_3m6_54</Signal>
+            <Signal>clk_enable_3m6_27</Signal>
+            <Signal>clk_falling_3m6_27</Signal>
             <Bus name="ex_bus_data[7:0]">
                 <Signal>ex_bus_data[7]</Signal>
                 <Signal>ex_bus_data[6]</Signal>
@@ -39,27 +39,6 @@
             <Signal>ex_bus_iorq_n</Signal>
             <Signal>bus_rd_n</Signal>
             <Signal>bus_wr_n</Signal>
-            <Signal>ex_bus_data_reverse_n</Signal>
-            <Bus name="bus_addr[15:0]">
-                <Signal>bus_addr[15]</Signal>
-                <Signal>bus_addr[14]</Signal>
-                <Signal>bus_addr[13]</Signal>
-                <Signal>bus_addr[12]</Signal>
-                <Signal>bus_addr[11]</Signal>
-                <Signal>bus_addr[10]</Signal>
-                <Signal>bus_addr[9]</Signal>
-                <Signal>bus_addr[8]</Signal>
-                <Signal>bus_addr[7]</Signal>
-                <Signal>bus_addr[6]</Signal>
-                <Signal>bus_addr[5]</Signal>
-                <Signal>bus_addr[4]</Signal>
-                <Signal>bus_addr[3]</Signal>
-                <Signal>bus_addr[2]</Signal>
-                <Signal>bus_addr[1]</Signal>
-                <Signal>bus_addr[0]</Signal>
-            </Bus>
-            <Signal>ppi_req_r</Signal>
-            <Signal>ppi_req_w</Signal>
             <Bus name="cpu_dout[7:0]">
                 <Signal>cpu_dout[7]</Signal>
                 <Signal>cpu_dout[6]</Signal>
@@ -70,17 +49,21 @@
                 <Signal>cpu_dout[1]</Signal>
                 <Signal>cpu_dout[0]</Signal>
             </Bus>
-            <Bus name="cpu_dout_swap[7:0]">
-                <Signal>cpu_dout_swap[7]</Signal>
-                <Signal>cpu_dout_swap[6]</Signal>
-                <Signal>cpu_dout_swap[5]</Signal>
-                <Signal>cpu_dout_swap[4]</Signal>
-                <Signal>cpu_dout_swap[3]</Signal>
-                <Signal>cpu_dout_swap[2]</Signal>
-                <Signal>cpu_dout_swap[1]</Signal>
-                <Signal>cpu_dout_swap[0]</Signal>
+            <Signal>scc2_req</Signal>
+            <Signal>megaram_req</Signal>
+            <Signal>ram_req</Signal>
+            <Signal>ram_busy</Signal>
+            <Signal>VideoDHClk</Signal>
+            <Signal>VideoDLClk</Signal>
+            <Signal>ram_write</Signal>
+            <Signal>wait_io</Signal>
+            <Bus name="wait_cycles[4:0]">
+                <Signal>wait_cycles[4]</Signal>
+                <Signal>wait_cycles[3]</Signal>
+                <Signal>wait_cycles[2]</Signal>
+                <Signal>wait_cycles[1]</Signal>
+                <Signal>wait_cycles[0]</Signal>
             </Bus>
-            <Signal>ppi_swap</Signal>
         </SignalList>
         <Triggers>
             <Trigger index="0">
@@ -134,67 +117,29 @@
                     <Signal>bus_iorq_n</Signal>
                 </SignalList>
             </Trigger>
-            <Trigger index="5">
-                <SignalList>
-                    <Bus restorename="bus_data[7:0]">
-                        <Signal>bus_data[7]</Signal>
-                        <Signal>bus_data[6]</Signal>
-                        <Signal>bus_data[5]</Signal>
-                        <Signal>bus_data[4]</Signal>
-                        <Signal>bus_data[3]</Signal>
-                        <Signal>bus_data[2]</Signal>
-                        <Signal>bus_data[1]</Signal>
-                        <Signal>bus_data[0]</Signal>
-                    </Bus>
-                </SignalList>
-            </Trigger>
+            <Trigger index="5"/>
             <Trigger index="6">
                 <SignalList>
-                    <Bus restorename="bus_addr[15:0]">
-                        <Signal>bus_addr[15]</Signal>
-                        <Signal>bus_addr[14]</Signal>
-                        <Signal>bus_addr[13]</Signal>
-                        <Signal>bus_addr[12]</Signal>
-                        <Signal>bus_addr[11]</Signal>
-                        <Signal>bus_addr[10]</Signal>
-                        <Signal>bus_addr[9]</Signal>
-                        <Signal>bus_addr[8]</Signal>
-                        <Signal>bus_addr[7]</Signal>
-                        <Signal>bus_addr[6]</Signal>
-                        <Signal>bus_addr[5]</Signal>
-                        <Signal>bus_addr[4]</Signal>
-                        <Signal>bus_addr[3]</Signal>
-                        <Signal>bus_addr[2]</Signal>
-                        <Signal>bus_addr[1]</Signal>
-                        <Signal>bus_addr[0]</Signal>
-                    </Bus>
+                    <Signal>bus_wr_n</Signal>
                 </SignalList>
             </Trigger>
             <Trigger index="7">
                 <SignalList>
-                    <Signal>pri_slot_num[2]</Signal>
+                    <Signal>scc2_req</Signal>
                 </SignalList>
             </Trigger>
             <Trigger index="8">
                 <SignalList>
-                    <Signal>bus_mreq_n</Signal>
+                    <Signal>megaram_req</Signal>
                 </SignalList>
             </Trigger>
-            <Trigger index="9">
-                <SignalList>
-                    <Signal>bus_rd_n</Signal>
-                </SignalList>
-            </Trigger>
+            <Trigger index="9"/>
             <Trigger index="10">
                 <SignalList>
-                    <Signal>ppi_req_w</Signal>
+                    <Signal>ram_write</Signal>
                 </SignalList>
             </Trigger>
-            <Trigger index="11">
-                <SignalList>
-                    <Signal>ppi_req_r</Signal>
-                </SignalList>
-            </Trigger>
+            <Trigger index="11"/>
             <Trigger index="12"/>
             <Trigger index="13"/>
             <Trigger index="14"/>
@@ -206,21 +151,21 @@
             <MatchUnit index="2" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="0000000000000000" value1="0000000000000000" trigger="2"/>
             <MatchUnit index="3" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="11110011" value1="00000000" trigger="3"/>
             <MatchUnit index="4" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="0" value1="0" trigger="4"/>
-            <MatchUnit index="5" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="10011001" value1="00000000" trigger="5"/>
-            <MatchUnit index="6" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="0100000000110001" value1="0000000000000000" trigger="6"/>
+            <MatchUnit index="5" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="5"/>
+            <MatchUnit index="6" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="0" value1="0" trigger="6"/>
             <MatchUnit index="7" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="7"/>
-            <MatchUnit index="8" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="0" value1="0" trigger="8"/>
-            <MatchUnit index="9" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="0" value1="0" trigger="9"/>
+            <MatchUnit index="8" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="8"/>
+            <MatchUnit index="9" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="0" value1="0" trigger="9"/>
             <MatchUnit index="10" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="10"/>
-            <MatchUnit index="11" enabled="1" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="11"/>
-            <MatchUnit index="12" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="0" value1="0" trigger="12"/>
-            <MatchUnit index="13" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="0" value1="0" trigger="13"/>
+            <MatchUnit index="11" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="11"/>
+            <MatchUnit index="12" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="12"/>
+            <MatchUnit index="13" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="13"/>
             <MatchUnit index="14" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="14"/>
-            <MatchUnit index="15" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="" value1=""/>
+            <MatchUnit index="15" enabled="0" match_type="0" counter_enable="0" counter_width="2" counter="2" countinuous="0" func="0" value0="1" value1="0" trigger="15"/>
         </MatchUnits>
         <Expressions type="Static">
-            <Expression>M10|M11</Expression>
+            <Expression>M0</Expression>
         </Expressions>
     </AoCore>
-    <GAO_ID>1111010111011000</GAO_ID>
+    <GAO_ID>0011101111110010</GAO_ID>
 </GAO_CONFIG>

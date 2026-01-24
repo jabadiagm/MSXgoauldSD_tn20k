@@ -43,21 +43,19 @@
         <File path="msx_debug/timing_debug.v" type="file.verilog" enable="1"/>
         <File path="pulse_min_max/pulse_max.v" type="file.verilog" enable="1"/>
         <File path="pulse_min_max/pulse_min.v" type="file.verilog" enable="1"/>
-        <File path="src/bios_msx2p.v" type="file.verilog" enable="1"/>
+        <File path="src/flash_rw.v" type="file.verilog" enable="1"/>
         <File path="src/gowin/clk_108p.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_clkdiv/gowin_clkdiv.v" type="file.verilog" enable="1"/>
         <File path="src/impulse.v" type="file.verilog" enable="1"/>
-        <File path="src/logo_fm.v" type="file.verilog" enable="1"/>
         <File path="src/megaram.v" type="file.verilog" enable="1"/>
         <File path="src/memory.v" type="file.verilog" enable="1"/>
         <File path="src/msx2p_debug.v" type="file.verilog" enable="1"/>
+        <File path="src/ocm/kanji.v" type="file.verilog" enable="1"/>
         <File path="src/ocm/rtc.v" type="file.verilog" enable="1"/>
         <File path="src/psg_filter.v" type="file.verilog" enable="1"/>
-        <File path="src/subrom_msx2p.v" type="file.verilog" enable="1"/>
         <File path="src/uart_tx.v" type="file.verilog" enable="1"/>
         <File path="src/wondertang/crc16.v" type="file.verilog" enable="1"/>
         <File path="src/wondertang/dpram.v" type="file.verilog" enable="1"/>
-        <File path="src/wondertang/flash.v" type="file.verilog" enable="1"/>
         <File path="src/wondertang/pinfilter.v" type="file.verilog" enable="1"/>
         <File path="src/wondertang/sd_reader.sv" type="file.verilog" enable="1"/>
         <File path="src/wondertang/sdcmd_ctrl.sv" type="file.verilog" enable="1"/>
@@ -89,9 +87,12 @@
         <File path="denoise/denoise.vhd" type="file.vhdl" enable="1"/>
         <File path="monostable/monostable.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_clkdiv2/gowin_clkdiv2.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/ocm/fifo.vhd" type="file.vhdl" enable="1"/>
         <File path="src/ocm/lpf.vhd" type="file.vhdl" enable="1"/>
         <File path="src/ocm/scc_wave2.vhd" type="file.vhdl" enable="1"/>
         <File path="src/ocm/swioports.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/ocm/uart_lite.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/ocm/wifi_lite.vhd" type="file.vhdl" enable="1"/>
         <File path="tn_vdp_v3_v9958/src/ram.vhd" type="file.vhdl" enable="1"/>
         <File path="tn_vdp_v3_v9958/src/vdp/vdp.vhd" type="file.vhdl" enable="1"/>
         <File path="tn_vdp_v3_v9958/src/vdp/vdp_colordec.vhd" type="file.vhdl" enable="1"/>

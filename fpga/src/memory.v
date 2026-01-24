@@ -1,4 +1,3 @@
-`define SDRAM_32
 
 module memory_ctrl (
     input wire clk_27m,
@@ -7,21 +6,18 @@ module memory_ctrl (
 	input wire video_dhclk,
 	input wire video_dlclk,
 
-	input wire [7:0] mapper_din,
-    input wire mapper_req,
-    input wire mapper_write,
-	input wire megaram_req,
-	input wire megaram_write,
-	input wire [21:0] mapper_addr,
-	input wire [20:0] megaram_addr,
+	input wire [7:0] ram_din,
+    input wire ram_req,
+    input wire ram_write,
+	input wire [22:0] ram_addr,
 	input wire [7:0] vram_din,
 	input wire vram_write,
 	input wire [16:0] vram_addr,
     input wire bus_rfsh_n,
 	
-	output reg [7:0] mapper_dout,
-    output reg [7:0] megaram_dout,
+	output reg [7:0] ram_dout,
 	output reg [15:0] vram_dout,
+    output reg ram_busy,
 
     // Magic ports for SDRAM to be inferred
     output wire O_sdram_clk,
@@ -56,11 +52,7 @@ module memory_ctrl (
     assign IO_sdram_dq = SdrDat;
 
 
-`ifndef SDRAM_32
-    reg [21:0] sdram_addr;
-`else
     reg [22:0] sdram_addr;
-`endif
     wire sdram_read;
     reg sdram_write;
     wire sdram_dout;
@@ -73,34 +65,22 @@ module memory_ctrl (
             enable_sdram <= 0;
             sdram_addr <= 0;
             sdram_write <= 0;
+            ram_busy <= 0;
         end
         else begin
             enable_sdram <= 0;
             case ( sdram_seq )
                 3'd0 : begin
                     sdram_write <= 0;
-                    if  ( ( mapper_req == 1 || megaram_req == 1 ) && ( video_dlclk == 1 && video_dhclk == 1 ) ) begin
+                    if  ( ram_req == 1 && ( video_dlclk == 1 && video_dhclk == 1 ) ) begin
                         sdram_seq <= 3'd1;
+                        ram_busy <= 1;
                     end
                 end
                 3'd1 : begin
                     enable_sdram <= 1;
-                    if ( mapper_req == 1 ) begin
-    `ifndef SDRAM_32
-                        sdram_addr <= mapper_addr[21:0];
-    `else
-                        sdram_addr <= { 1'b0, mapper_addr[21:0] };
-    `endif
-                        sdram_write <= mapper_write;
-                    end
-                    else begin
-    `ifndef SDRAM_32
-                        sdram_addr <= { 2'b10, megaram_addr[19:0] };
-    `else
-                        sdram_addr <= { 3'b10, megaram_addr[20:0] };
-    `endif
-                        sdram_write <= megaram_write;
-                    end
+                    sdram_addr <= ram_addr[22:0] ;
+                    sdram_write <= ram_write;
                     sdram_seq <= 3'd2;
                 end
                 3'd2 : begin
@@ -113,16 +93,12 @@ module memory_ctrl (
                 3'd3 : begin
                     enable_sdram <= 1;
                     sdram_write <= 0;
-                    if ( mapper_req == 1 ) begin
-                        mapper_dout <= RamDbi;
-                    end
-                    else begin
-                        megaram_dout <= RamDbi;
-                    end
+                    ram_dout <= RamDbi;
                     sdram_seq <= 3'd4;
+                    ram_busy <= 0;
                 end
                 3'd4 : begin
-                    if ( mapper_req == 0 && megaram_req == 0 ) begin
+                    if ( ram_req == 0 ) begin
                         sdram_seq <= 3'd0;
                     end
                 end
@@ -304,12 +280,6 @@ module memory_ctrl (
                             SdrHLdq <= 0;
                         end
                         else*/ if( video_dlclk == 0 ) begin
-`ifndef SDRAM_32
-                            SdrUdq <= ~ sdram_addr[0];
-                            SdrLdq <= sdram_addr[0];
-                            SdrHUdq <= 1; //~ sdram_addr[0];
-                            SdrHLdq <= 1; //sdram_addr[0];
-`else
                             if ( sdram_addr[1] == 0 ) begin
                                 SdrUdq <= ~ sdram_addr[0];
                                 SdrLdq <= sdram_addr[0];
@@ -322,7 +292,6 @@ module memory_ctrl (
                                 SdrHUdq <= ~ sdram_addr[0];
                                 SdrHLdq <= sdram_addr[0];
                             end
-`endif
                         end
                         else begin
                             SdrUdq <= ~vram_addr[16];
@@ -357,13 +326,8 @@ module memory_ctrl (
                         SdrBa  <= { 1'b1, 1'b0 };                              //-- bank C+D
                     end
                     else*/ if( video_dlclk == 0 ) begin
-`ifndef SDRAM_32
-                        SdrAdr <= sdram_addr[11:1];   //-- cpu read/write
-                        SdrBa  <= sdram_addr[21:20];                         //-- bank A+B+C+D
-`else
                         SdrAdr <= sdram_addr[12:2];   //-- cpu read/write
                         SdrBa  <= sdram_addr[22:21];                         //-- bank A+B+C+D
-`endif
                     end
                     else begin
                         SdrAdr <= vram_addr[10:0];                   //-- vdp read/write
@@ -382,14 +346,10 @@ module memory_ctrl (
                     SdrAdr[7:0] <= 0;                                              //-- clear ESE-RAM
                 end
                 else*/ if( video_dlclk == 0 ) begin
-`ifndef SDRAM_32
-                    SdrAdr[7:0] <= sdram_addr[19:12];                                         //-- cpu read/write
-`else
                     SdrAdr[7:0] <= sdram_addr[20:13];                                         //-- cpu read/write
-`endif
                 end
                 else begin
-                    SdrAdr[7:0] <= { 3'b000, vram_addr[15:11] };
+                    SdrAdr[7:0] <= { 3'b111, vram_addr[15:11] };
                 end
             end
             default: ; //null;
@@ -407,7 +367,7 @@ module memory_ctrl (
                         SdrDat <= 32'hffff_ffff;
                     end
                     else*/ if( video_dlclk == 0 ) begin
-                        SdrDat <= { mapper_din, mapper_din, mapper_din, mapper_din };                //-- "101"(cpu write)
+                        SdrDat <= { ram_din, ram_din, ram_din, ram_din };                //-- "101"(cpu write)
                     end
                     else begin
                         SdrDat <= { vram_din, vram_din, vram_din, vram_din };          //-- "111"(vdp write)
@@ -453,14 +413,6 @@ module memory_ctrl (
     always @ ( posedge clk_108m ) begin
         if( ff_sdr_seq_5 == 1 || ff_sdr_seq_6 == 1 ) begin
             if( SdrSta_4 == 1 ) begin                        //-- read cpu
-`ifndef SDRAM_32
-                if( sdram_addr[0] == 0 ) begin
-                    RamDbi <= SdrDat[7:0];
-                end
-                else begin
-                    RamDbi <= SdrDat[15:8];
-                end
-`else
                 if( sdram_addr[1:0] == 2'b00 )
                     RamDbi <= SdrDat[7:0];
                 else if( sdram_addr[1:0] == 2'b01 )
@@ -469,7 +421,6 @@ module memory_ctrl (
                     RamDbi <= SdrDat[23:16];
                 else
                     RamDbi <= SdrDat[31:24];
-`endif
             end
         end
     end

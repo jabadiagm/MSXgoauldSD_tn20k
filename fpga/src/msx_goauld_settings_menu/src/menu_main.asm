@@ -444,7 +444,7 @@ selected_saveReset:
 	ld   a, #48						; Set I/O device to Goauld (#48)
 	out  (#40),a
 	in   a, (#42)
-	or   #80						; Bit 7: reset
+	or   #C0						; Bit 7: reset, Bit 6: save config in flash
 	out  (#42), a
 	ei
 	ret
@@ -509,6 +509,7 @@ ENDIF
 	rlca
 	rlca
 	or   b
+	or   #40						; Bit 6: save config in flash
 	ld   b, a
 
 	ld   c, #42
@@ -575,7 +576,7 @@ print_selection:
 ; ############## Constants
 
 menuTitleStr:
-	.db "MSX Goa'uld Settings Menu v1.22",0
+	.db "MSX Goa'uld Settings Menu v1.23",0
 enableMapperStr:
 	.db "Enable Mapper",0
 IFDEF ENABLE_MEGARAM
@@ -591,7 +592,7 @@ slot1GhostStr:
 enableScanlinesStr:
 	.db "Enable Scanlines",0
 slowDeviceStr:
-	.db "Slow Device",0
+	.db "Compatible Mode",0
 saveExitStr:
 	.db "Save & Exit",0
 saveResetStr:

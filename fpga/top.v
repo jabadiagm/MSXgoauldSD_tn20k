@@ -5,9 +5,10 @@
 `define ENABLE_SCAN_LINES
 `define ENABLE_SDCARD
 `define ENABLE_CONFIG
-`define SDRAM_32
 `define ENABLE_WAIT //extra wait state for mreq+wr
+//`define ENABLE_WAIT_ADAPTIVE //wait required
 //`define SWAP23
+`define ENABLE_WIFI
 
 module top
 #(
@@ -56,8 +57,14 @@ module top
     output wire sd_dat2,     // 1
     output wire sd_dat3,     // 1
 
+`ifdef ENABLE_WIFI
     //uart
     output wire uart_tx,
+    input wire uart_rx,
+`endif 
+
+    //usb uart
+    output wire usb_uart_tx,
 
     // Magic ports for SDRAM to be inferred
     output wire O_sdram_clk,
@@ -103,28 +110,11 @@ end
     assign clk_enable_54m = ( cnt_clk_enable_27m[0] == 1 ) ? 1: 0;
 
     wire clk_27m;
-//    BUFG buf1 (
-//        .O(clk_27m),
-//        .I(ex_clk_27m)
-//    );
-//    assign clk_27m = ex_clk_27m;
     Gowin_CLKDIV div4(
         .clkout(clk_27m), //output clkout
         .hclkin(clk_108m), //input hclkin
         .resetn(1) //input resetn
     );
-
-//    wire clk_54m;
-//    wire clk_54m_buf;
-//    Gowin_rPLL pll(
-//        .clkout(clk_54m_buf), //output clkout
-//        .clkin(ex_clk_27m) //input clkin
-//    );
-
-//    BUFG buf2(
-//        .O(clk_54m),
-//        .I(clk_54m_buf)
-//    );
 
     wire bus_clk_3m6;
     PINFILTER dn1(
@@ -133,15 +123,15 @@ end
         .din(ex_bus_clk_3m6),
         .dout(bus_clk_3m6)
     );
-
-//    wire clk_enable_3m6;
-//    wire clk_falling_3m6;
-//    reg bus_clk_3m6_prev;
-//    always @ (posedge clk_54m) begin
-//        bus_clk_3m6_prev <= bus_clk_3m6;
-//    end
-//    assign clk_enable_3m6 = (bus_clk_3m6_prev == 0 && bus_clk_3m6 == 1);
-//    assign clk_falling_3m6 = (bus_clk_3m6_prev == 1 && bus_clk_3m6 == 0);
+    reg bus_clk_3m6_27;
+//    CLOCK_DIV #(
+//        .CLK_SRC(54.0),
+//        .CLK_DIV(15.0),
+//        .PRECISION_BITS(16)
+//    ) cpuclkd (
+//        .clk_src(clk_54m),
+//        .clk_div(bus_clk_3m6)
+//    );
 
     reg bus_clk_3m6_27;
     reg bus_clk_3m6_27_0;
@@ -151,12 +141,7 @@ end
     reg bus_clk_3m6_27_4;
     reg bus_clk_3m6_27_5;
     reg bus_clk_3m6_27_6;
-//    PINFILTER dn5(
-//        .clk(clk_27m),
-//        .reset_n(1),
-//        .din(ex_bus_clk_3m6),
-//        .dout(bus_clk_3m6_27)
-//    );
+
     always @ (posedge clk_27m) begin
         bus_clk_3m6_27_6 <= bus_clk_3m6;
         bus_clk_3m6_27_5 <= bus_clk_3m6_27_6;
@@ -192,8 +177,8 @@ end
         bus_clk_3m6_54 <= bus_clk_3m6;
         bus_clk_3m6_prev_54 <= bus_clk_3m6_54;
     end
-    assign clk_enable_3m6_54 = (bus_clk_3m6_prev_54 == 0 && bus_clk_3m6_54 == 1);
-    assign clk_falling_3m6_54 = (bus_clk_3m6_prev_54 == 1 && bus_clk_3m6_54 == 0);
+    assign clk_enable_3m6_54 = (bus_clk_3m6_54 == 0 && bus_clk_3m6 == 1);
+    assign clk_falling_3m6_54 = (bus_clk_3m6_54 == 1 && bus_clk_3m6 == 0);
 
     wire bus_wait_n;
     PINFILTER dn2(
@@ -309,19 +294,10 @@ end
     //bus demux
     reg [1:0] msel;
     reg [7:0] bus_mp;
-//    reg msel_ff = 0;
     reg [4:0] mp_cnt;
     wire [15:0] bus_addr;
     assign ex_msel = msel;
     assign ex_bus_mp = bus_mp;
-//    assign msel = { msel_ff, ~ msel_ff };
-//    assign bus_mp = ( msel[1] == 1 ) ? bus_addr[15:8] : bus_addr[7:0];
-
-//    always @ (posedge clk_108m) begin
-//        if (cnt_clk_enable_27m == 1) begin
-//            msel_ff <= ~ msel_ff;
-//        end
-//    end
 
     localparam IDLE = 2'd0;
     localparam LATCH = 2'd1;
@@ -331,7 +307,6 @@ end
     localparam [3:0] TP = 4'd1; //prefetch time
     reg [1:0] state_demux;
     reg [3:0] counter_demux;
-    //reg [15:0] bus_addr_demux;
     reg low_byte_demux;
     wire update_demux;
     assign bus_mp = ( low_byte_demux == 0 ) ? bus_addr[15:8] : bus_addr[7:0];
@@ -339,7 +314,6 @@ end
         if (~bus_reset_n) begin
             state_demux <= LATCH;
             counter_demux <= 4'd0;
-            //bus_addr_demux <= ~ bus_addr;
             low_byte_demux <= 0;
         end 
         else begin
@@ -354,7 +328,6 @@ end
                     end
                 end
                 {LATCH, 4'd1} : begin
-                    //bus_addr_demux <= bus_addr;
                     msel[1] <= 1;
                 end
                 {LATCH, 4'd1 + TON} : begin
@@ -470,33 +443,38 @@ end
                      ( vdp_csr_n == 0) ? vdp_dout :
                 `endif
                 `ifdef ENABLE_MAPPER
-                     ( mapper_read == 1) ? mapper_dout :
+                     ( mapper_read == 1) ? ram_dout :
                 `endif
                 `ifdef ENABLE_BIOS
+                     ( exp_slot0_req_r == 1) ? ~exp_slot0  :
                      ( exp_slotx_req_r == 1) ? ~exp_slotx  :
-                     ( bios_req == 1) ? bios_dout : 
-                     ( subrom_req == 1) ? subrom_dout :
-                     ( msx_logo_req == 1 ) ? msx_logo_dout :
+                     ( bios_req == 1) ? ram_dout : 
+                     ( subrom_logo_req == 1 ) ? ram_dout :
                 `endif
                 `ifdef ENABLE_SDCARD
                      ( sd_busreq_w == 1) ? sd_cd_w :
                      ( sram_busreq_w == 1) ? sram_cd_w :
-                     ( megarom_req == 1) ? ff_rom_dout :
+                     ( megarom_req == 1) ? ram_dout :
                      //( slot3_req_r == 1) ? 8'hff :
                  `endif
                 `ifdef ENABLE_SOUND
                      //( scc_req3_r == 1 ) ? scc_dout:
-                     ( megaram_req == 1 ) ? megaram_dout:
+                     ( megaram_req == 1 ) ? ram_dout:
                 `endif
-                     //( slot0_req_r == 1 || slot3_req_r == 1) ? 8'hff :
                 `ifdef ENABLE_CONFIG
                      ( config_req == 1 && config_ok == 1) ? config_dout :
                      ( config_req == 1 && config_ok == 0) ? swio_dout :
                 `endif
-                     ( rtc_req_r == 1 ) ? rtc_dout :
-                `ifdef SWAP23
-                     ( ppi_req_r == 1 ) ? ppi_port_a :
+                     ( kanji_driver_req == 1 ) ? ram_dout :
+                     ( kanji_data_req_r == 1 ) ? ram_dout :
+                `ifdef ENABLE_WIFI
+                     ( wifi_req == 1 ) ? ram_dout :
+                     ( f2_req_r == 1 ) ? f2_port :
+                     ( uart_req == 1 ) ? uart_dout :
                 `endif
+                     ( rtc_req_r == 1 ) ? rtc_dout :
+                     ( ppi_req_r == 1 ) ? ppi_port_a :
+                     ( slot0_req_r == 1 ) ? 8'hff :
                      ( slotx_req_r == 1 ) ? 8'hff :
                       bus_data;
     end
@@ -559,22 +537,26 @@ end
 `ifdef ENABLE_WAIT
     wire wait_io;
     reg wait_io_ff = 1;
+    reg [6:0] wait_cycles;
     reg [6:0] state_wait;
     localparam WAIT_IDLE = 7'd0;
     localparam WAIT_STATE1 = 7'd1;
     localparam WAIT_STATE2 = 7'd3;
     localparam WAIT_STATE3 = 7'd2;
+    localparam WAIT_STATE4 = 7'd4;
 
     assign wait_io = wait_io_ff;
+
+  `ifndef ENABLE_WAIT_ADAPTIVE
     always @ (posedge clk_54m) begin
         if (~bus_reset_n) begin
-            state_wait <= IDLE;
+            state_wait <= WAIT_IDLE;
             wait_io_ff <= 1;
         end 
         else begin
             case (state_wait)
                 WAIT_IDLE: begin
-                    if ( (ex_bus_iorq_n == 0 || ( config_enable_wait == 1 && ex_bus_mreq_n == 0 ) )&& (bus_rd_n == 0 || bus_wr_n == 0) ) begin
+                    if ( ram_write == 1 || (ex_bus_iorq_n == 0 || ( config_enable_wait == 1 && ex_bus_mreq_n == 0 ) )&& (bus_rd_n == 0 || bus_wr_n == 0) ) begin
                         wait_io_ff <= 0;
                         state_wait <= WAIT_STATE1;
                     end
@@ -598,6 +580,48 @@ end
             endcase
         end
     end
+  `else
+    always @ (posedge clk_54m) begin
+        if (~bus_reset_n) begin
+            state_wait <= WAIT_IDLE;
+            wait_io_ff <= 1;
+        end 
+        else begin
+            case (state_wait)
+                WAIT_IDLE: begin
+                    if ( (ex_bus_iorq_n == 0 || bus_mreq_n == 0 ) && (bus_rd_n == 0 || bus_wr_n == 0) ) begin
+                        wait_io_ff <= 0;
+                        wait_cycles <= 7'd6;
+                        state_wait <= WAIT_STATE1;
+                    end
+                end
+                WAIT_STATE1: begin
+                    wait_cycles <= wait_cycles - 1;
+                    if ( wait_cycles == 0 ) begin
+                        state_wait <= WAIT_STATE2;
+                    end
+                end
+                WAIT_STATE2: begin
+                    if ( ram_busy == 0 && clk_enable_3m6_54 == 1 ) begin
+                        state_wait <= WAIT_STATE3;
+                    end
+                end
+                WAIT_STATE3: begin
+                    if ( clk_falling_3m6_54 == 1 ) begin
+                        wait_io_ff <= 1;
+                        state_wait <= WAIT_STATE4;
+                    end
+                end
+                WAIT_STATE4: begin
+                    if ( bus_rd_n == 1 && bus_wr_n == 1) begin
+                        state_wait <= WAIT_IDLE;
+                    end
+                end
+            endcase
+        end
+    end
+  `endif
+
 `endif
 
     wire update_addr;
@@ -606,20 +630,28 @@ end
         //.T2Write (0),     //0 => WR_n active in T3, /=0 => WR_n active in T2
         .IOWait   (1)      // 0 => Single I/O cycle, 1 => Std I/O cycle
     ) cpu1 (
-        .RESET_n   (bus_reset_n & reset3_n),
+        .RESET_n   (bus_reset_n & reset3_n & flash_idle),
         .CLK_n     (clk_54m),
-`ifdef ENABLE_WAIT
-		.clk_enable (clk_enable_3m6_54 & wait_io),
-		.clk_falling (clk_falling_3m6_54 & wait_io),
-`else
+    `ifdef ENABLE_WAIT
+        .clk_enable (clk_enable_3m6_54 & wait_io ),
+        .clk_falling (clk_falling_3m6_54 & wait_io ),
+    `else
         .clk_enable (clk_enable_3m6_54),
 		.clk_falling (clk_falling_3m6_54),
-`endif
-`ifdef ENABLE_SDCARD
-        .WAIT_n    (bus_wait_n & flash_wait_n),
-`else
+    `endif
+    `ifdef ENABLE_WIFI
+      `ifndef ENABLE_WAIT_ADAPTIVE
+        .WAIT_n    (bus_wait_n & wait_uart),
+      `else
+        .WAIT_n    (wait_uart),
+      `endif
+    `else
+      `ifndef ENABLE_WAIT_ADAPTIVE
         .WAIT_n    (bus_wait_n),
-`endif
+      `else
+        .WAIT_n    (1),
+      `endif
+    `endif
     `ifdef ENABLE_V9958
         .INT_n     (bus_int_n & vdp_int),
     `else
@@ -666,7 +698,12 @@ end
         end
     end
 
-    //expanded slot 3
+    //expanded slots 0 & 3
+    reg [7:0] exp_slot0;
+    wire [1:0] exp_slot0_page;
+    wire [3:0] exp_slot0_num;
+    reg exp_slot0_req_r;
+    reg exp_slot0_req_w;
     reg [7:0] exp_slotx;
     wire [1:0] exp_slotx_page;
     wire [3:0] exp_slotx_num;
@@ -678,6 +715,8 @@ end
     always @ (posedge clk_54m) begin
         xffh <= bus_addr[15:8] == 8'hff;
         xffl <= bus_addr[7:0] == 8'hff;
+        exp_slot0_req_w <= ( bus_mreq_n == 0 && bus_wr_n == 0 && xffh == 1 && xffl == 1 && pri_slot_num[0] == 1 ) ? 1: 0;
+        exp_slot0_req_r <= ( bus_mreq_n == 0 && bus_rd_n == 0 && xffh == 1 && xffl == 1 && pri_slot_num[0] == 1 ) ? 1: 0;
         exp_slotx_req_w <= ( bus_mreq_n == 0 && bus_wr_n == 0 && xffh == 1 && xffl == 1 && pri_slot_num[SD_SLOT] == 1 ) ? 1: 0;
         exp_slotx_req_r <= ( bus_mreq_n == 0 && bus_rd_n == 0 && xffh == 1 && xffl == 1 && pri_slot_num[SD_SLOT] == 1 ) ? 1: 0;
     end
@@ -686,6 +725,17 @@ end
 
 //    assign exp_slotx_req_w = ( bus_mreq_n == 0 && bus_wr_n == 0 && xffff == 1 && pri_slot_num[0] == 1 ) ? 1: 0;
 //    assign exp_slotx_req_r = ( bus_mreq_n == 0 && bus_rd_n == 0 && xffff == 1 && pri_slot_num[0] == 1 ) ? 1: 0;
+
+    // slot #0
+    always @ (posedge clk_27m or negedge bus_reset_n) begin
+        if ( bus_reset_n == 0 )
+            exp_slot0 <= 8'h00;
+        else begin
+            if (exp_slot0_req_w == 1 ) begin
+                exp_slot0 <= cpu_dout;
+            end
+        end
+    end
 
     // slot #3
     always @ (posedge clk_27m or negedge bus_reset_n) begin
@@ -713,6 +763,15 @@ end
                       ( bus_addr[15:14] == 2'b01) ? 4'b0010 :
                       ( bus_addr[15:14] == 2'b10) ? 4'b0100 :
                                                     4'b1000;
+    assign exp_slot0_page = ( bus_addr[15:14] == 2'b00) ? exp_slot0[1:0] :
+                            ( bus_addr[15:14] == 2'b01) ? exp_slot0[3:2] :
+                            ( bus_addr[15:14] == 2'b10) ? exp_slot0[5:4] :
+                                                          exp_slot0[7:6];
+
+    assign exp_slot0_num = ( exp_slot0_page == 2'b00 ) ? 4'b0001 :
+                           ( exp_slot0_page == 2'b01 ) ? 4'b0010 :
+                           ( exp_slot0_page == 2'b10 ) ? 4'b0100 :
+                                                         4'b1000;
 
     assign exp_slotx_page = ( bus_addr[15:14] == 2'b00) ? exp_slotx[1:0] :
                             ( bus_addr[15:14] == 2'b01) ? exp_slotx[3:2] :
@@ -724,96 +783,91 @@ end
                            ( exp_slotx_page == 2'b10 ) ? 4'b0100 :
                                                          4'b1000;
 
-//    reg slot0_req_r;
-//    wire slot0_req_w;
-//    wire slot3_req_r;
-//    wire slot3_req_w;
-//    always @ (posedge clk_27m) begin
-//        slot0_req_r <= ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[0] == 1 ) ? 1 : 0;
-//    end
-//`ifdef ENABLE_BIOS
-//    assign slot0_req_w = ( bus_mreq_n == 0 && bus_wr_n == 0 && pri_slot_num[0] == 1 ) ? 1 : 0;
-//`endif
-//    assign slot3_req_r = ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[3] == 1 ) ? 1 : 0;
-//    assign slot3_req_w = ( bus_mreq_n == 0 && bus_wr_n == 0 && pri_slot_num[3] == 1 ) ? 1 : 0;
-
+    reg slot0_req_r;
     reg slotx_req_r;
     always @ (posedge clk_54m) begin
-        slotx_req_r <= ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[SD_SLOT] == 1 ) ? 1 : 0;
+        slot0_req_r <= ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[0] == 1 ) ? 1 : 0;
+        slotx_req_r <= ( ( config_enable_mapper3 == 1 || config_enable_megaram3 == 1 || config_enable_sdcard == 1 ) && bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[SD_SLOT] == 1 ) ? 1 : 0;
     end
 
 `ifdef ENABLE_BIOS
     //bios
     reg bios_req;
     wire [7:0] bios_dout;
-    //wire [7:0] bios_int_dout;
-    //wire [7:0] key_bra_dout;
-    //wire keyboard_area;
-    always @ (posedge clk_27m) begin
-        bios_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[0] == 1 ) ? 1 : 0;
+    always @ (posedge clk_54m) begin
+        bios_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[0] == 1 && exp_slot0_num[0] == 1) ? 1 : 0;
     end
-    //assign bios_req = ( bus_addr[15] == 0 && bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[0] == 1 ) ? 1 : 0;
-    //assign keyboard_area = ( bus_addr[14:8] == 7'hd || bus_addr[14:8] == 7'he ) ? 1 : 0;
-
-    bios_msx2p bios1 (
-        .address (bus_addr[14:0]),
-        .clock (clk_27m),
-        .data (8'h00),
-        .wren (0),
-        .q (bios_dout)
-    );
-
-//    keyboard_bra key_bra1 (
-//        .address ( { ~bus_addr[8], bus_addr[7:0] } ),
-//        .clock (clk_108m),
-//        .data (8'h00),
-//        .wren (0),
-//        .q (key_bra_dout)
-//    );
-//    assign bios_dout = ( config_keyboard != 2'b01 || keyboard_area == 0 ) ? bios_int_dout : key_bra_dout;
 
     //subrom
     reg subrom_req;
     wire [7:0] subrom_dout;
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         subrom_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[SD_SLOT] == 1 && page_num[0] == 1 && exp_slotx_num[1] == 1 ) ? 1 : 0;
     end
-    //assign subrom_req = ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[2] == 1 && page_num[0] == 1 ) ? 1 : 0;
-
-    subrom_msx2p subrom1 (
-        .address (bus_addr[13:0]),
-        .clock (clk_27m),
-        .data (8'h00),
-        .wren (0),
-        .q (subrom_dout)
-    );
 
     //msx logo
     reg msx_logo_req;
     wire [7:0] msx_logo_dout;
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         msx_logo_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && page_num[1] == 1 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[1] == 1 ) ? 1 : 0;
     end
-    //assign msx_logo_req = ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[2] == 1 && page_num[1] == 1 ) ? 1 : 0;
 
-    logo_fm logo1 (
-        .address (bus_addr[13:0]),
-        .clock (clk_27m),
-        .data (8'h00),
-        .wren (0),
-        .q (msx_logo_dout)
-    );
+    //subrom + logo
+    reg subrom_logo_req;
+    always @ (posedge clk_54m) begin
+        subrom_logo_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && (page_num[0] == 1 || page_num[1] == 1) && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[1] == 1 ) ? 1 : 0;
+    end
+
+    //kanji driver
+    reg kanji_driver_req;
+    always @ (posedge clk_54m) begin
+        kanji_driver_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && (page_num[1] == 1 || page_num[2] == 1) && pri_slot_num[0] == 1 && exp_slot0_num[1] == 1 ) ? 1 : 0;
+    end
+
 
 `else
 
     wire bios_req;
     wire [7:0] bios_dout;
     wire subrom_req;
-    wire [7:0] subrom_dout
+    wire [7:0] subrom_dout;
     wire msx_logo_req;
     wire [7:0] msx_logo_dout;
+    wire kanji_driver_req;
+    wire subrom_logo_req;
 
 `endif
+
+`ifdef ENABLE_WIFI
+
+    //wifi driver
+    reg wifi_req;
+    always @ (posedge clk_54m) begin
+        wifi_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && page_num[1] == 1 && pri_slot_num[0] == 1 && exp_slot0_num[2] == 1 ) ? 1 : 0;
+    end
+
+    //uart
+    wire uart_req;
+    wire wait_uart;
+    wire [7:0] uart_dout;
+
+    assign uart_req = (bus_addr[7:1] == 7'b0000011 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1 : 0; // ESP ports 06-07h
+
+    wifi uwifi (
+        .clk_i      (clk_27m),
+        .wait_o     (wait_uart),
+        .reset_i    (bus_reset_n),
+        .iorq_i     (bus_iorq_n),
+        .wrt_i      (bus_wr_n),
+        .rd_i       (bus_rd_n),
+        .rx_i       (uart_rx),
+        .tx_o       (uart_tx),
+        .adr_i      (bus_addr),
+        .db_i       (cpu_dout),
+        .db_o       (uart_dout)
+    );
+
+`endif 
 
     //rtc
     wire rtc_req_r;
@@ -825,7 +879,7 @@ end
     rtc rtc1(
         .clk21m(clk_27m),
         .reset(0),
-        .clkena(1),
+        .clkena(clk_enable_3m6_27),
         .req(rtc_req_w | rtc_req_r),
         .ack(),
         .wrt(rtc_req_w),
@@ -937,17 +991,10 @@ end
         end
         else if (mapper_reg_write == 1) begin
             case (bus_addr[1:0])
-`ifndef SDRAM_32
-                2'b00: mapper_reg0 <= { 1'b0, cpu_dout[6:0] };
-                2'b01: mapper_reg1 <= { 1'b0, cpu_dout[6:0] };
-                2'b10: mapper_reg2 <= { 1'b0, cpu_dout[6:0] };
-                2'b11: mapper_reg3 <= { 1'b0, cpu_dout[6:0] };
-`else
                 2'b00: mapper_reg0 <= cpu_dout[7:0];
                 2'b01: mapper_reg1 <= cpu_dout[7:0];
                 2'b10: mapper_reg2 <= cpu_dout[7:0];
                 2'b11: mapper_reg3 <= cpu_dout[7:0];
-`endif
             endcase
         end
     end
@@ -962,8 +1009,98 @@ end
     assign mapper_addr = 22'd0;
 `endif
 
-reg [15:0] VrmDbi2;
-reg [7:0] megaram_dout;
+    reg [15:0] VrmDbi2;
+    reg [7:0] megaram_dout;
+    wire [22:0] ram_addr;
+    wire ram_read;
+    wire ram_write;
+    wire ram_req;
+    wire [7:0] ram_din;
+    reg [7:0] ram_dout;
+    reg ram_busy;
+
+    //rom map, 512 KB, [18:0]
+    //876 54321098 76543210
+    //111 11xxxxxx xxxxxxxx free, 16 KB, 0x7c000 - 0x7ffff
+    //111 10xxxxxx xxxxxxxx esp8266, 16 KB, 0x78000 - 0x7bfff
+    //111 0xxxxxxx xxxxxxxx kanji, 32 KB, 0x70000 - 0x77fff
+    //110 11xxxxxx xxxxxxxx fm + logo + boot menu, 16 KB, 0x6c000 - 0x6ffff
+    //110 10xxxxxx xxxxxxxx msx2+ subrom, 16 KB, 0x68000 - 0x6bfff
+    //110 0xxxxxxx xxxxxxxx msx2+ bios, 32 KB, 0x60000 - 0x67fff
+    //10x xxxxxxxx xxxxxxxx wondertang disk, 128 KB, 0x40000 - 0x5ffff
+    //01x xxxxxxxx xxxxxxxx jis2, 128 KB, 0x20000 - 0x3ffff
+    //00x xxxxxxxx xxxxxxxx jis1, 128 KB, 0x00000 - 0x1ffff
+
+    //sdram map, 8 MB, [22:0]
+    //2109876 54321098 76543210
+    //11111xx xxxxxxxx xxxxxxxx vram, 256 KB, bank D
+    //1110111 10xxxxxx xxxxxxxx esp8266, 16 KB, 0x778000 - 0x77bfff
+    //1110111 0xxxxxxx xxxxxxxx kanji driver, 32 KB, 0x770000 - 0x777fff
+    //1110110 11xxxxxx xxxxxxxx fm + logo + boot menu, 16 KB, 0x76c000 - 0x76ffff
+    //1110110 10xxxxxx xxxxxxxx msx2+ subrom, 16 KB, 0x768000 - 0x76bfff
+    //1110110 0xxxxxxx xxxxxxxx msx2+ bios, 32 KB, 0x760000 - 0x767fff
+    //111010x xxxxxxxx xxxxxxxx wondertang disk, 128 KB, bank D, 0x740000 - 0x75ffff
+    //11100xx xxxxxxxx xxxxxxxx kanji data jis1 + jis2, 256 KB, 0x700000 - 0x73ffff
+    //10xxxxx xxxxxxxx xxxxxxxx megaram, 2 MB, bank C
+    //0xxxxxx xxxxxxxx xxxxxxxx mapper, 4 MB, banks A+B
+
+    assign ram_addr = (~flash_idle) ? rom_addr :
+                `ifdef ENABLE_MAPPER
+                        (mapper_req == 1) ? { 1'b0, mapper_addr[21:0] } :  //bank A+B
+                `endif
+                        (bios_req == 1 ) ? { 8'b11101100, bus_addr[14:0] } : //bank D
+                        (subrom_logo_req == 1 ) ? { 8'b11101101, bus_addr[14:0] } : //bank D
+                `ifdef ENABLE_SDCARD
+                        (megarom_req == 1 ) ? { 6'b111010, megarom_addr[16:0] } : //bank D
+                `endif
+                        (megaram_req == 1 ) ? { 2'b10, megaram_addr[20:0] } :  //bank C
+                        (kanji_driver_req == 1 ) ? { 8'b11101110, ~bus_addr[14], bus_addr[13:0] } : //bank D
+                        (kanji_data_ram_req == 1 ) ? { 5'b11100, kanji_data_ram_addr[17:0] } : //bank D
+                `ifdef ENABLE_WIFI
+                        (wifi_req == 1 ) ? { 9'b111011110, bus_addr[13:0] } : //bank D
+                `endif
+                        23'h7fffff; 
+    
+    assign ram_read = (~flash_idle) ? 0 : 
+                `ifdef ENABLE_MAPPER
+                      (mapper_read == 1) ? ~bus_rd_n :
+                `endif
+                      (bios_req == 1) ? ~bus_rd_n :
+                      (subrom_logo_req == 1) ? ~bus_rd_n :
+                `ifdef ENABLE_SDCARD
+                      (megarom_req == 1) ? ~bus_rd_n :
+                `endif
+                      (megaram_req == 1) ? ~bus_rd_n :
+                      (kanji_driver_req == 1) ? ~bus_rd_n :
+                      (kanji_data_ram_req == 1) ? ~bus_rd_n :
+                `ifdef ENABLE_WIFI
+                      (wifi_req == 1) ? ~bus_rd_n :
+                `endif
+                      0;
+    
+    assign ram_write = (~flash_idle) ? rom_write : 
+                `ifdef ENABLE_MAPPER
+                      (mapper_write == 1 ) ? ~bus_wr_n :
+                `endif
+                      (megaram_wrt == 1) ? ~bus_wr_n :
+                      0; 
+
+    assign ram_req = (~flash_idle) ? rom_write : 
+                     (mapper_req == 1) ? mapper_req:
+                     (bios_req == 1) ? bios_req:
+                     (subrom_logo_req == 1) ? subrom_logo_req:
+                `ifdef ENABLE_SDCARD
+                     (megarom_req == 1) ? megarom_req:
+                `endif
+                     (megaram_req == 1) ? megaram_req:
+                     (kanji_driver_req == 1) ? kanji_driver_req:
+                     (kanji_data_ram_req == 1) ? kanji_data_ram_req:
+                `ifdef ENABLE_WIFI
+                     (wifi_req == 1) ? wifi_req:
+                `endif
+                      0;
+
+    assign ram_din = (~flash_idle) ? { rom_dout, rom_dout }  : { cpu_dout, cpu_dout };
 
 memory_ctrl mem1 (
     .clk_27m(clk_54m),
@@ -972,21 +1109,18 @@ memory_ctrl mem1 (
     .video_dhclk(VideoDHClk),
     .video_dlclk(VideoDLClk),
 
-    .mapper_din(cpu_dout),
-    .mapper_req(mapper_req),
-    .mapper_write(mapper_write),
-    .megaram_req(megaram_req),
-    .megaram_write(megaram_wrt),
-    .mapper_addr(mapper_addr),
-    .megaram_addr(megaram_addr),
+    .ram_din(ram_din),
+    .ram_req(ram_req),
+    .ram_write(ram_write),
+    .ram_addr(ram_addr),
     .vram_din(VrmDbo),
     .vram_write(~WeVdp_n),
     .vram_addr(VdpAdr),
     .bus_rfsh_n(bus_rfsh_n),
 
-    .mapper_dout(mapper_dout),
-    .megaram_dout(megaram_dout),
+    .ram_dout(ram_dout),
     .vram_dout(VrmDbi2),
+    .ram_busy(ram_busy),
 
     .O_sdram_clk(O_sdram_clk),
     .O_sdram_cke(O_sdram_cke),
@@ -1218,13 +1352,55 @@ memory_ctrl mem1 (
 
 `endif
 
+    //kanji data
+    wire kanji_data_req_r;
+    wire kanji_data_req_w;
+    wire kanji_data_ram_req;
+    reg [7:0] kanji_data_dout;
+    wire [17:0] kanji_data_ram_addr;
+    assign kanji_data_req_w = (bus_addr[7:2] == 6'b110110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1 : 0; // I/O:B4-B5h   / I/O:D8-DBh / Kanji-data
+    assign kanji_data_req_r = (bus_addr[7:2] == 6'b110110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1 : 0; // I/O:B4-B5h   / I/O:D8-DBh / Kanji-data
+
+    kanji kanji1(
+        .clk21m(clk_27m),
+        .reset(0),
+        .req(kanji_data_req_w | kanji_data_req_r),
+        .wrt(kanji_data_req_w),
+        .adr(bus_addr),
+        .dbo(cpu_dout),
+        .ramreq(kanji_data_ram_req),
+        .ramadr(kanji_data_ram_addr)
+    );
+
+`ifdef ENABLE_WIFI
+    //f2 port
+    wire f2_req_r;
+    wire f2_req_w;
+    reg [7:0] f2_port;
+
+    assign f2_req_r = (bus_addr[7:0] == 8'hf2 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1:0;
+    assign f2_req_w = (bus_addr[7:0] == 8'hf2 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
+
+    always @ (posedge clk_27m or negedge bus_reset_n) begin
+        if ( bus_reset_n == 0)
+            f2_port <= 8'h00;
+        else begin
+            if (f2_req_w == 1 ) begin
+                f2_port <= cpu_dout;
+            end
+        end
+    end
+`endif
+
+    localparam CONFIG1_DEFAULT = 8'hfb;
+    localparam CONFIG2_DEFAULT = 8'h0f;
 
 `ifdef ENABLE_CONFIG
     //config
     reg [7:0] config0_ff = 8'h00;
-    reg [7:0] config1_ff = 8'hfb;
+    reg [7:0] config1_ff = CONFIG1_DEFAULT;
     reg [7:0] config1_temp_ff;
-    reg [7:0] config2_ff = 8'h07;
+    reg [7:0] config2_ff = CONFIG2_DEFAULT;
     reg [7:0] config2_temp_ff;
     reg [1:0] config_mapper_slot_ff = 2'b11;
     reg [1:0] config_megaram_slot_ff = 2'b11;
@@ -1238,6 +1414,7 @@ memory_ctrl mem1 (
     reg config_enable_sdcard;
     wire config_enable_wait;
     reg config_reset_ff;
+    reg config_flash_write_ff;
     reg config_update;
     wire config_enable_scanlines;
     wire [1:0] config_mapper_slot;
@@ -1247,6 +1424,7 @@ memory_ctrl mem1 (
     wire config0_req;
     wire config1_req;
     wire config2_req;
+    wire config_reset_req;
     wire config_reset;
     wire config_ok;
     wire [7:0] config_dout;
@@ -1254,6 +1432,7 @@ memory_ctrl mem1 (
 
     always @ (posedge clk_27m) begin
         config_reset_ff <= 0;
+        config_flash_write_ff <= 0;
         config_update <= 0;
         if (clk_enable_3m6_27 == 1 ) begin
             if (config0_req == 1 ) begin
@@ -1266,7 +1445,10 @@ memory_ctrl mem1 (
             end
             if (config2_req == 1 ) begin
                 config_update <= 1;
-                config2_temp_ff <= cpu_dout[6:0];
+                config2_temp_ff <= cpu_dout[5:0];
+                if ( cpu_dout[6] == 1) begin
+                    config_flash_write_ff <= 1;
+                end
                 if ( cpu_dout[7] == 1) begin
                     config_reset_ff <= 1;
                 end
@@ -1283,7 +1465,19 @@ memory_ctrl mem1 (
         end
     end
 
+    reg config_init_delay = 0;
     always @ (posedge clk_27m) begin
+        config_init_delay <= config_init;
+        if (config_init == 1 ) begin
+            if (s2 == 1) begin
+                config1_ff <= CONFIG1_DEFAULT;
+                config2_ff <= CONFIG2_DEFAULT;
+            end
+            else begin
+                config1_ff <= config_sig[2];
+                config2_ff <= config_sig[3];
+            end
+        end
         if (config_update == 1) begin
             config1_ff <= config1_temp_ff;
             config2_ff <= config2_temp_ff;
@@ -1298,8 +1492,9 @@ memory_ctrl mem1 (
     monostable mono (
         .pulse_in(config_reset_ff),
         .clock(clk_27m),
-        .pulse_out(config_reset)
+        .pulse_out(config_reset_req)
     );
+    assign config_reset = (config_reset_req == 1 && flash_write_busy == 0) ? 1 : 0;
 
     assign config_ok = (config0_ff == 8'hb7) ? 1 : 0;
     assign config0_req = (bus_addr[7:0] == 8'h40 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
@@ -1314,12 +1509,12 @@ memory_ctrl mem1 (
                          ( bus_addr[3:0] == 4'h2 ) ? config2_ff : 8'hff;
 
 
-    always_latch begin
-        if (~bus_reset_n) begin
+    always @ (posedge clk_54m) begin
+        if (bus_reset_n == 0 || config_init_delay == 1 ) begin
             config_mapper_slot_ff <= config1_ff[5:4];
-            //config_megaram_slot_ff <= config1_ff[7:6];
             config_enable_mapper3 <= (config1_ff[0] == 1 && config1_ff[5:4] == 2'b11);
             config_enable_mapper12 <= (config1_ff[0] == 1 && config1_ff[5:4] != 2'b11);
+            //config_megaram_slot_ff <= config1_ff[7:6];
             config_enable_sdcard <= config2_ff[0];
             config_sdcard_slot_ff <= config2_ff[2:1];
         end
@@ -1363,34 +1558,21 @@ memory_ctrl mem1 (
 
 `endif
 
-`ifdef ENABLE_SDCARD
-
-    //megarom
-    reg megarom_req;
-    wire [24:0] megarom_addr;
-    reg [2:0] megarom_page_ff;
-    reg megarom_page_req;
-    wire [2:0] megarom_page;
-
-    always @ (posedge clk_54m) begin
-        megarom_req <=     ( config_enable_sdcard == 1 && bus_mreq_n == 0 && bus_rfsh_n == 1 && bus_rd_n == 0 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[2] == 1 && (page_num[1] == 1 || page_num[2] == 1) ) ? 1 : 0;
-        megarom_page_req <= ( bus_mreq_n == 0 && bus_rfsh_n == 1 && bus_wr_n == 0 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[2] == 1 && bus_addr == 16'h6000 ) ? 1 : 0;
-    end
-    assign megarom_page = megarom_page_ff;
-    assign megarom_addr = { 8'b00001000, megarom_page, bus_addr[13:0] };
-
-    always @(posedge clk_27m or negedge bus_reset_n) begin
-        if (bus_reset_n == 0) begin
-           megarom_page_ff <= 3'b0;
-        end 
-        else begin
-            if (bus_clk_3m6_27 == 1) begin
-                if (megarom_page_req == 1) begin
-                    megarom_page_ff <= cpu_dout[2:0]; // select page
-                end
-            end
-        end
-    end
+    /// FLASH ROM LOADER - BIOS
+    localparam FLASH_START_ADDRESS = 24'h200000;
+    localparam RAM_START_ADDRESS = 23'h6fffff;
+    localparam GOAULD_ROM_SIZE = 512*1024 + 6; //512KB + signature (AB) + config
+    reg ff_rom_wr = 0;
+    reg [24:0] ff_rom_addr;
+    
+    wire rom_write;
+    wire [7:0] rom_dout;
+    wire [24:0] rom_addr;
+    assign rom_write = flash_busy;
+    assign rom_dout = ff_rom_dout;
+    assign rom_addr = ff_rom_addr;
+    
+    reg [31:0] ff_flash_counter;
 
 //flash
     reg [23:0] ff_flash_addr = 24'd0;
@@ -1401,6 +1583,20 @@ memory_ctrl mem1 (
     wire[7:0] flash_dout;
     wire flash_data_ready;
     wire flash_busy;
+    wire [7:0] flash_write_din;
+    wire flash_write_busy;
+    wire [7:0] flash_write_counter;
+    wire flash_write_terminate;
+    assign flash_write_din = (flash_write_counter == 8'd00) ? 8'h41 :
+                             (flash_write_counter == 8'd01) ? 8'h42 :
+                        `ifdef ENABLE_CONFIG
+                             (flash_write_counter == 8'd02) ? config1_ff :
+                             (flash_write_counter == 8'd03) ? config2_ff : 8'hff;
+                        `else
+                             (flash_write_counter == 8'd02) ? CONFIG1_DEFAULT :
+                             (flash_write_counter == 8'd03) ? CONFIG2_DEFAULT : 8'hff;
+                        `endif
+    assign flash_write_terminate = (flash_write_counter == 8'd6) ? 1 : 0;
 
     flash # (
         .STARTUP_WAIT(1)
@@ -1418,9 +1614,190 @@ memory_ctrl mem1 (
         .dout(flash_dout),
         .data_ready(flash_data_ready),
         .busy(flash_busy),
-        .terminate(ff_flash_terminate)
+        .terminate(ff_flash_terminate),
+        .write_enable(config_flash_write_ff),
+        .write_din(flash_write_din),
+        .write_busy(flash_write_busy),
+        .write_counter(flash_write_counter),
+        .write_terminate(flash_write_terminate),
+        .write_addr(24'h280000) //24'h278000)
     );
 
+    reg [7:0] ff_flash_state = 8'd0;
+    
+    localparam STATE_RESET          = 8'd0;
+    localparam STATE_READ_START     = 8'd1;
+    localparam STATE_READ_LOOP      = 8'd2;
+    localparam STATE_IDLE           = 8'd3;
+    localparam STATE_INIT1          = 8'd4;
+    localparam STATE_INIT2          = 8'd5;
+    localparam STATE_INIT3          = 8'd6;
+    localparam STATE_INIT4          = 8'd7;
+    reg [31:0] nose = 0;
+    wire flash_idle;
+    assign flash_idle = (ff_flash_state == STATE_IDLE ) ? 1'b1 : 1'b0;
+    
+    always @(posedge clk_54m, negedge reset3_n) begin
+    if (reset3_n == 0) begin
+        ff_flash_state = STATE_RESET;
+        ff_flash_rd <= 0;
+        ff_rom_wr <= 0;
+        nose <= 0;
+    end else
+        case (ff_flash_state)
+    
+            STATE_RESET: begin   // reset
+                ff_flash_state <= STATE_READ_START;
+                ff_flash_rd <= 0;
+                ff_rom_wr <= 0;
+                ff_flash_terminate <= 0;
+            end
+    
+            STATE_INIT1: begin  // start read
+                if (flash_busy == 0) begin
+                    ff_flash_addr <= 24'h000000;
+                    ff_flash_rd <= 1;
+                    ff_flash_state = STATE_INIT2;
+                end
+            end
+    
+            STATE_INIT2: begin  // start read
+                if (flash_busy == 1) begin
+                    ff_flash_rd <= 0;
+                    ff_flash_state = STATE_INIT3;
+                end
+            end
+            
+            STATE_INIT3: begin  // start read
+                if (flash_busy == 0) begin
+                    nose <= 0;
+                    ff_flash_terminate <= 1;
+                    ff_flash_state = STATE_INIT4;
+                end
+            end
+    
+            STATE_INIT4: begin  // start read
+                nose <= nose + 1;
+                if (nose > 10) begin
+                    ff_flash_terminate <= 0;
+                    ff_flash_state = STATE_READ_START;
+                end
+            end
+    
+            STATE_READ_START: begin  // start read
+                if (flash_busy == 0) begin
+                    ff_flash_addr <= FLASH_START_ADDRESS;
+                    ff_rom_addr <= RAM_START_ADDRESS;
+                    ff_flash_rd <= 1;
+                    ff_flash_state = STATE_READ_LOOP;
+                    ff_flash_counter <= GOAULD_ROM_SIZE;
+                end
+            end
+    
+            STATE_READ_LOOP: begin  // loop read
+                if (flash_busy == 0) begin
+    
+                    if (ff_flash_counter > 0) begin
+                        
+                        if (~ff_flash_rd) begin
+    
+                            ff_flash_addr <= ff_flash_addr + 1;
+                            ff_flash_counter <= ff_flash_counter - 1;
+                            ff_flash_rd <= 1;
+    
+                            ff_rom_wr <= 1;
+                            ff_rom_addr <= ff_rom_addr + 1;
+                            ff_rom_dout <= flash_dout; 
+    
+                        end
+                    end else begin    
+                        ff_rom_wr <= 0;
+                        ff_flash_rd <= 0;
+                        ff_flash_state <= STATE_IDLE;
+                    end
+                end else begin
+                    ff_rom_wr <= 0;
+                    ff_flash_rd <= 0;
+                end
+            end
+    
+            STATE_IDLE: begin  // idle
+                ff_flash_terminate <= 1;
+            end
+    
+        endcase
+    end
+
+    // configuration + signature
+    reg [7:0] config_sig [0:5];
+    reg [2:0] last_bytes_cnt;
+    wire new_byte;
+    wire config_init;
+    assign new_byte = (~ff_flash_rd && flash_busy == 0);
+    assign config_init = (config_sig[0] == 8'h41 && config_sig[1] == 8'h42 && last_bytes_cnt == 3'd1) ? 1 : 0;
+
+    always @(posedge clk_54m or negedge reset3_n) begin
+        if (!reset3_n) begin
+            last_bytes_cnt <= 3'd0;
+            config_sig[0] <= 8'd0;
+            config_sig[1] <= 8'd0;
+            config_sig[2] <= 8'd0;
+            config_sig[3] <= 8'd0;
+            config_sig[4] <= 8'd0;
+            config_sig[5] <= 8'd0;
+        end else begin
+            if (ff_flash_counter == 32'd6)
+                last_bytes_cnt <= 3'd6;
+            if (new_byte && last_bytes_cnt != 3'd0) begin
+                case (last_bytes_cnt)
+                    3'd6: config_sig[0] <= flash_dout;
+                    3'd5: config_sig[1] <= flash_dout;
+                    3'd4: config_sig[2] <= flash_dout;
+                    3'd3: config_sig[3] <= flash_dout;
+                    3'd2: config_sig[4] <= flash_dout;
+                    3'd1: config_sig[5] <= flash_dout;
+                endcase
+                last_bytes_cnt <= last_bytes_cnt - 1;
+            end
+        end
+    end
+
+
+`ifdef ENABLE_SDCARD
+
+    
+   
+    //megarom
+    reg megarom_req;
+    wire [16:0] megarom_addr;
+    reg [2:0] megarom_page_ff;
+    reg megarom_page_req;
+    wire [2:0] megarom_page;
+
+    always @ (posedge clk_54m) begin
+        megarom_req <=     ( config_enable_sdcard == 1 && bus_mreq_n == 0 && bus_rfsh_n == 1 && bus_rd_n == 0 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[2] == 1 && (page_num[1] == 1 || page_num[2] == 1) ) ? 1 : 0;
+        megarom_page_req <= ( bus_mreq_n == 0 && bus_rfsh_n == 1 && bus_wr_n == 0 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[2] == 1 && bus_addr == 16'h6000 ) ? 1 : 0;
+    end
+    assign megarom_page = megarom_page_ff;
+    assign megarom_addr = { megarom_page, bus_addr[13:0] };
+
+    always @(posedge clk_27m or negedge bus_reset_n) begin
+        if (bus_reset_n == 0) begin
+           megarom_page_ff <= 3'b0;
+        end 
+        else begin
+            if (bus_clk_3m6_27 == 1) begin
+                if (megarom_page_req == 1) begin
+                    megarom_page_ff <= cpu_dout[2:0]; // select page
+                end
+            end
+        end
+    end
+
+
+
+
+    /*
     reg [7:0] ff_flash_state = 8'd0;
 
     localparam STATE_RESET          = 8'd0;
@@ -1473,7 +1850,7 @@ memory_ctrl mem1 (
                 end
             end
         endcase
-    end
+    end*/
 
 
     //sd card
@@ -1715,7 +2092,7 @@ memory_ctrl mem1 (
         .pulse_out(send)
     );
 
-//    msx2p_debug debug (
+//    msx2p_debug debug1 (
 //        .clk_27m(clk_27m),
 //        .clk (clk_27m),
 //        .reset_n ( bus_reset_n ),
@@ -1726,7 +2103,7 @@ memory_ctrl mem1 (
 //        .bus_mreq_n(bus_mreq_n),
 //        .bus_wr_n(bus_wr_n),
 //        .send(send),
-//        .uart_tx(uart_tx),
+//        .uart_tx(usb_uart_tx),
 //        .boot_ok( )
 //    );
 
@@ -1740,7 +2117,7 @@ memory_ctrl mem1 (
         .bus_wr_n(ex_bus_wr_n),
         .send(send),
 
-        .uart_tx(uart_tx)
+        .uart_tx(usb_uart_tx)
     );
 
 
