@@ -61,12 +61,12 @@ Config menu is showed pressing g during MSX logo. New improved menu is created b
 
 ## Flashing
 Progamming is done in two steps:
-* Flash firmware Z80_goauld.fs
-<br>
+* Flash firmware Z80_goauld.fs  
+
 ![Flash1a](/pics/flashing1a.png)
 ![Flash1b](/pics/flashing1b.png)
-* Flash rom pack. Set Operation = "exFlash C Bin Erase, Program thru GAO-Bridge" and Start Address = 0x200000
-<br>
+* Flash rom pack. Set Operation = "exFlash C Bin Erase, Program thru GAO-Bridge" and Start Address = 0x200000  
+
 ![Flash2a](/pics/flashing2a.png)
 ![Flash2b](/pics/flashing2b.png)
 
