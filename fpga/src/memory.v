@@ -1,6 +1,6 @@
 
 module memory_ctrl (
-    input wire clk_27m,
+    input wire clk_54m,
 	input wire clk_108m,
 	input wire bus_reset_n,
 	input wire video_dhclk,
@@ -59,7 +59,7 @@ module memory_ctrl (
     reg [2:0] sdram_seq;
     reg enable_sdram;
 
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         if ( bus_reset_n == 0) begin
             sdram_seq <= 3'd0;
             enable_sdram <= 0;
@@ -72,8 +72,11 @@ module memory_ctrl (
             case ( sdram_seq )
                 3'd0 : begin
                     sdram_write <= 0;
-                    if  ( ram_req == 1 && ( video_dlclk == 1 && video_dhclk == 1 ) ) begin
-                        sdram_seq <= 3'd1;
+                    if  ( ram_req == 1 && ( video_dlclk == 1 ) ) begin
+                        enable_sdram <= 1;
+                        sdram_addr <= ram_addr[22:0] ;
+                        sdram_write <= ram_write;
+                        sdram_seq <= 3'd2;
                         ram_busy <= 1;
                     end
                 end

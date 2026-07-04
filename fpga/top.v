@@ -37,11 +37,13 @@ module top
     //output wire ex_bus_data_reverse,
     output wire [7:0] ex_bus_mp,
 
-    //hdmi out
+`ifdef ENABLE_V9958
+   //hdmi out
     output wire [2:0] data_p,
     output wire [2:0] data_n,
     output wire clk_p,
     output wire clk_n,
+`endif 
 
     // flash
     output wire mspi_cs,
@@ -87,8 +89,6 @@ initial begin
 end
     //`default_nettype none
 
-    //assign SLTSL3 = bus_mreq_disable ^ bus_iorq_disable ^ xffh ^ xffl ^ mapper_read ^ exp_slotx_req_r ^ bios_req ^ subrom_req ^ vdp_csr_n;
-
     //clocks
     wire clk_108m;
     wire clk_108m_n;
@@ -117,16 +117,20 @@ end
     );
 
     wire bus_clk_3m6;
-    PINFILTER dn1(
-        .clk(clk_54m),
-        .reset_n(1),
-        .din(ex_bus_clk_3m6),
-        .dout(bus_clk_3m6)
-    );
-    reg bus_clk_3m6_27;
+    reg bus_clk_3m6_ff;
+    always @ (posedge clk_54m) begin
+        bus_clk_3m6_ff <= ex_bus_clk_3m6;
+    end
+    assign bus_clk_3m6 = bus_clk_3m6_ff;
+//    PINFILTER dn1(
+//        .clk(clk_54m),
+//        .reset_n(1),
+//        .din(ex_bus_clk_3m6),
+//        .dout(bus_clk_3m6)
+//    );
 //    CLOCK_DIV #(
 //        .CLK_SRC(54.0),
-//        .CLK_DIV(15.0),
+//        .CLK_DIV(6.75),
 //        .PRECISION_BITS(16)
 //    ) cpuclkd (
 //        .clk_src(clk_54m),
@@ -142,21 +146,22 @@ end
     reg bus_clk_3m6_27_5;
     reg bus_clk_3m6_27_6;
 
-    always @ (posedge clk_27m) begin
-        bus_clk_3m6_27_6 <= bus_clk_3m6;
-        bus_clk_3m6_27_5 <= bus_clk_3m6_27_6;
-        bus_clk_3m6_27_4 <= bus_clk_3m6_27_5;
-        bus_clk_3m6_27_3 <= bus_clk_3m6_27_4;
-        bus_clk_3m6_27_2 <= bus_clk_3m6_27_3;
-        bus_clk_3m6_27_1 <= bus_clk_3m6_27_2;
-        bus_clk_3m6_27_0 <= bus_clk_3m6_27_1;
-        bus_clk_3m6_27 <= bus_clk_3m6_27_0;
-    end
+//    always @ (posedge clk_27m) begin
+//        bus_clk_3m6_27_6 <= bus_clk_3m6;
+//        bus_clk_3m6_27_5 <= bus_clk_3m6_27_6;
+//        bus_clk_3m6_27_4 <= bus_clk_3m6_27_5;
+//        bus_clk_3m6_27_3 <= bus_clk_3m6_27_4;
+//        bus_clk_3m6_27_2 <= bus_clk_3m6_27_3;
+//        bus_clk_3m6_27_1 <= bus_clk_3m6_27_2;
+//        bus_clk_3m6_27_0 <= bus_clk_3m6_27_1;
+//        bus_clk_3m6_27 <= bus_clk_3m6_27_0;
+//    end
 
     wire clk_enable_3m6_27;
     wire clk_falling_3m6_27;
     reg bus_clk_3m6_prev_27;
     always @ (posedge clk_27m) begin
+        bus_clk_3m6_27 <= bus_clk_3m6;
         bus_clk_3m6_prev_27 <= bus_clk_3m6_27;
     end
     assign clk_enable_3m6_27 = (bus_clk_3m6_prev_27 == 0 && bus_clk_3m6_27 == 1);
@@ -180,13 +185,55 @@ end
     assign clk_enable_3m6_54 = (bus_clk_3m6_54 == 0 && bus_clk_3m6 == 1);
     assign clk_falling_3m6_54 = (bus_clk_3m6_54 == 1 && bus_clk_3m6 == 0);
 
-    wire bus_wait_n;
-    PINFILTER dn2(
-        .clk(clk_54m),
-        .reset_n(1),
-        .din(ex_bus_wait_n),
-        .dout(bus_wait_n)
-    );
+    wire clk_enable_6m75_54_pre;
+    wire clk_falling_6m75_54_pre;
+    wire clk_enable_13m5_54_pre;
+    wire clk_falling_13m5_54_pre;
+    reg  video_dhclk_prev_54_pre;
+
+    always @ (posedge clk_54m) begin
+        video_dhclk_prev_54_pre <= VideoDHClk;
+    end
+
+    assign clk_enable_6m75_54_pre  = (video_dhclk_prev_54_pre == 0 && VideoDHClk == 1 && VideoDLClk == 0);
+    assign clk_falling_6m75_54_pre = (video_dhclk_prev_54_pre == 0 && VideoDHClk == 1 && VideoDLClk == 1);
+    assign clk_enable_13m5_54_pre = (video_dhclk_prev_54_pre == 0 && VideoDHClk == 1 && VideoDLClk == 0 || video_dhclk_prev_54_pre == 0 && VideoDHClk == 1 && VideoDLClk == 1);
+    assign clk_falling_13m5_54_pre = (video_dhclk_prev_54_pre == 1 && VideoDHClk == 0 && VideoDLClk == 0 || video_dhclk_prev_54_pre == 1 && VideoDHClk == 0 && VideoDLClk == 1);
+
+    reg clk_6m75_ff;
+    wire clk_6m75_54;
+    always @ (posedge clk_54m) begin
+        if (clk_enable_6m75_54_pre) clk_6m75_ff <= 1;
+        else if (clk_falling_6m75_54_pre ) clk_6m75_ff <= 0;
+    end
+//    always @ (posedge clk_54m) begin
+//        if (clk_enable_13m5_54_pre) bus_clk_3m6_ff <= 1;
+//        else if (clk_falling_13m5_54_pre ) bus_clk_3m6_ff <= 0;
+//    end
+    assign clk_6m75_54 = clk_6m75_ff;
+
+    wire clk_enable_6m75_54;
+    wire clk_falling_6m75_54;
+    reg bus_clk_6m75_54;
+    reg bus_clk_6m75_prev_54;
+    always @ (posedge clk_54m) begin
+        bus_clk_6m75_54 <= clk_6m75_54;
+        bus_clk_6m75_prev_54 <= bus_clk_6m75_54;
+    end
+    assign clk_enable_6m75_54 = (bus_clk_6m75_54 == 0 && clk_6m75_54 == 1);
+    assign clk_falling_6m75_54 = (bus_clk_6m75_54 == 1 && clk_6m75_54 == 0);
+
+
+    reg bus_wait_n;
+//    PINFILTER dn2(
+//        .clk(clk_54m),
+//        .reset_n(1),
+//        .din(ex_bus_wait_n),
+//        .dout(bus_wait_n)
+//    );
+    always @ (posedge clk_54m) begin
+        bus_wait_n <= ex_bus_wait_n;
+    end
 
     wire bus_reset_n;
     PINFILTER dn3(
@@ -196,21 +243,24 @@ end
         .dout(bus_reset_n)
     );
 
-    wire bus_int_n;
+    reg bus_int_n;
 //    PINFILTER dn4(
 //        .clk(clk_108m),
 //        .reset_n(1),
 //        .din(ex_bus_int_n),
 //        .dout(bus_int_n)
 //    );
-    denoise dn4 (
-		.data_in (ex_bus_int_n),
-		.clock(clk_54m),
-		.data_out (bus_int_n)
-    );
+//    denoise dn4 (
+//		.data_in (ex_bus_int_n),
+//		.clock(clk_54m),
+//		.data_out (bus_int_n)
+//    );
+    always @ (posedge clk_54m) begin
+        bus_int_n <= ex_bus_int_n;
+    end
 
     reg [7:0] bus_data;
-    genvar i;
+    /*genvar i;
     generate
         for (i = 0; i <= 7; i++)
         begin: bus_din
@@ -226,18 +276,18 @@ end
 //                .data_out (bus_data[i])
 //            );
         end
-    endgenerate
+    endgenerate */
 
-//    always @ (posedge clk_108m) begin
-//        bus_data <= ex_bus_data;
-//    end
+    always @ (posedge clk_54m) begin
+        bus_data <= ex_bus_data;
+    end
 
     //startup logic
     reg reset1_n_ff;
     reg reset2_n_ff;
     reg reset3_n_ff;
-    wire reset1_n;
-    wire reset2_n;
+    //wire reset1_n;
+    //wire reset2_n;
     wire reset3_n;
 
     reg [20:0] counter_reset = 0;
@@ -294,11 +344,15 @@ end
     //bus demux
     reg [1:0] msel;
     reg [7:0] bus_mp;
-    reg [4:0] mp_cnt;
     wire [15:0] bus_addr;
     assign ex_msel = msel;
     assign ex_bus_mp = bus_mp;
 
+
+
+// ===========================================================================
+// VERSION INICIAL (referencia): actualiza SIEMPRE los dos latches en cada update_addr
+// ===========================================================================
     localparam IDLE = 2'd0;
     localparam LATCH = 2'd1;
     localparam FINISH1 = 2'd3;
@@ -308,14 +362,14 @@ end
     reg [1:0] state_demux;
     reg [3:0] counter_demux;
     reg low_byte_demux;
-    wire update_demux;
+    //wire update_demux;
     assign bus_mp = ( low_byte_demux == 0 ) ? bus_addr[15:8] : bus_addr[7:0];
     always @ (posedge clk_108m) begin
         if (~bus_reset_n) begin
             state_demux <= LATCH;
             counter_demux <= 4'd0;
             low_byte_demux <= 0;
-        end 
+        end
         else begin
             counter_demux = counter_demux + 4'd1;
             casex ({state_demux, counter_demux})
@@ -359,6 +413,119 @@ end
     end
 
 
+    // Registra bus_addr y update_addr en clk_54m antes de usarlos en la FSM de 108 MHz.
+    // bus_addr arrastra una ruta combinacional larga desde el core (IStatus, ~9 ns); en
+    // 54 MHz (18.5 ns) cierra de sobra, y asi la FSM de 108 MHz parte de un FF limpio
+    // (cruce 54->108 = FF -> logica ligera, dentro de los 9.259 ns). Retrasados 1 ciclo
+    // de 54 MHz, alineados entre si.
+//    reg [15:0] bus_addr_q;
+//    reg        update_addr_q;
+//    always @ (posedge clk_54m) begin
+//        if (~bus_reset_n) begin
+//            bus_addr_q    <= 16'd0;
+//            update_addr_q <= 1'b0;
+//        end
+//        else begin
+//            bus_addr_q    <= bus_addr;
+//            update_addr_q <= update_addr;
+//        end
+//    end
+// ===========================================================================
+// VERSION NUEVA: actualiza SOLO el byte (o bytes) que cambia. Si cambian ambos,
+// engancha primero el alto. ex_msel[1]=byte alto, ex_msel[0]=byte bajo.
+// ===========================================================================
+//    localparam [2:0] IDLE      = 3'd0;
+//    localparam [2:0] LATCH_HI  = 3'd1;
+//    localparam [2:0] SWITCH_LO = 3'd2;   // conmuta mux a byte bajo + asienta (TP)
+//    localparam [2:0] LATCH_LO  = 3'd3;
+//    localparam [2:0] FINISH    = 3'd4;
+//    localparam [3:0] TON = 4'd3;
+//    localparam [3:0] TP  = 4'd1;         // prefetch time
+
+//    reg [2:0]  state_demux;
+//    reg [3:0]  counter_demux;
+//    reg        low_byte_demux;
+//    reg [15:0] addr_latched;             // valor actualmente en los latches externos
+//    reg        do_lo;                    // queda pendiente enganchar el byte bajo
+
+//    assign bus_mp = ( low_byte_demux == 0 ) ? bus_addr_q[15:8] : bus_addr_q[7:0];
+
+//    wire hi_chg = ( bus_addr_q[15:8] != addr_latched[15:8] );
+//    wire lo_chg = ( bus_addr_q[7:0]  != addr_latched[7:0]  );
+
+//    always @ (posedge clk_108m) begin
+//        if (~bus_reset_n) begin
+             //arranque: fuerza enganchar ambos (latches externos en estado desconocido)
+//            state_demux    <= LATCH_HI;
+//            do_lo          <= 1'b1;
+//            counter_demux  <= 4'd0;
+//            low_byte_demux <= 1'b0;
+//            msel           <= 2'b00;
+//        end
+//        else begin
+//            case (state_demux)
+//                IDLE: begin
+//                    msel           <= 2'b00;
+//                    counter_demux  <= 4'd0;
+//                    low_byte_demux <= 1'b0;
+//                    if (update_addr_q == 1) begin
+//                        do_lo <= lo_chg;
+//                        if (hi_chg) begin
+//                            low_byte_demux <= 1'b0;       // byte alto en bus_mp
+//                            state_demux    <= LATCH_HI;
+//                        end
+//                        else if (lo_chg) begin
+//                            low_byte_demux <= 1'b1;       // solo bajo: conmuta mux
+//                            state_demux    <= SWITCH_LO;
+//                        end
+                         //si ninguno cambia (no deberia con update_addr) -> sigue IDLE
+//                    end
+//                end
+//                LATCH_HI: begin                            // byte alto ya estable
+//                    counter_demux <= counter_demux + 4'd1;
+//                    if (counter_demux == 4'd0)
+//                        msel[1] <= 1'b1;
+//                    else if (counter_demux == TON) begin
+//                        msel[1]       <= 1'b0;
+//                        counter_demux <= 4'd0;
+//                        if (do_lo) begin
+//                            low_byte_demux <= 1'b1;        // conmuta a byte bajo
+//                            state_demux    <= SWITCH_LO;
+//                        end
+//                        else
+//                            state_demux    <= FINISH;
+//                    end
+//                end
+//                SWITCH_LO: begin                           // espera TP a que asiente bus_mp
+//                    counter_demux <= counter_demux + 4'd1;
+//                    if (counter_demux == TP) begin
+//                        counter_demux <= 4'd0;
+//                        state_demux   <= LATCH_LO;
+//                    end
+//                end
+//                LATCH_LO: begin
+//                    counter_demux <= counter_demux + 4'd1;
+//                    if (counter_demux == 4'd0)
+//                        msel[0] <= 1'b1;
+//                    else if (counter_demux == TON) begin
+//                        msel[0]       <= 1'b0;
+//                        counter_demux <= 4'd0;
+//                        state_demux   <= FINISH;
+//                    end
+//                end
+//                FINISH: begin
+//                    msel           <= 2'b00;
+//                    low_byte_demux <= 1'b0;
+//                    addr_latched   <= bus_addr_q;          // refleja lo enganchado
+//                    if (update_addr_q == 0)
+//                        state_demux <= IDLE;
+//                end
+//                default: state_demux <= IDLE;
+//            endcase
+//        end
+//    end
+
+
 
 
     //bus isolation
@@ -373,7 +540,7 @@ end
     wire [7:0] cpu_dout;
     wire bus_mreq_disable;
     wire bus_iorq_disable;
-    wire bus_disable;
+    //wire bus_disable;
     assign ex_bus_m1_n = bus_m1_n;
     assign ex_bus_rfsh_n = bus_rfsh_n;
     assign ex_bus_data_reverse_n = ~ bus_data_reverse;
@@ -391,7 +558,7 @@ end
                         `endif 
                                 ) ? 1 : 0;
 
-    assign bus_disable = bus_mreq_disable | bus_iorq_disable;
+    //assign bus_disable = bus_mreq_disable | bus_iorq_disable;
 //    assign ex_bus_data = ( bus_data_reverse == 1 && slot0_req_w == 0 ) ? cpu_dout : 
 //                         ( slot0_req_w == 1 ) ? 8'hff :  8'hzz;
 `ifndef SWAP23
@@ -415,7 +582,7 @@ end
     assign cpu_dout_swap = { swap(cpu_dout[7:6]), swap(cpu_dout[5:4]), swap(cpu_dout[3:2]), swap(cpu_dout[1:0]) };
 
     reg ppi_swap;
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         if (~bus_reset_n) begin
             ppi_swap <= 0;
         end
@@ -444,11 +611,14 @@ end
                 `endif
                 `ifdef ENABLE_MAPPER
                      ( mapper_read == 1) ? ram_dout :
+                     ( mapper_reg_read == 1 ) ? mapper_reg_dout :
                 `endif
+                     ( sram_req_r == 1 ) ? sram_dout :
                 `ifdef ENABLE_BIOS
                      ( exp_slot0_req_r == 1) ? ~exp_slot0  :
                      ( exp_slotx_req_r == 1) ? ~exp_slotx  :
-                     ( bios_req == 1) ? ram_dout : 
+                     ( bios_req == 1 ) ? ram_dout :
+                     ( bios_missing_req == 1 ) ? bios_missing_dout :
                      ( subrom_logo_req == 1 ) ? ram_dout :
                 `endif
                 `ifdef ENABLE_SDCARD
@@ -486,14 +656,14 @@ end
 //    wire ex_bus_mreq_n_test;
     reg ex_bus_rd_n_ff;
     reg ex_bus_wr_n_ff;
-    reg ex_bus_iorq_n_ff;
-    reg ex_bus_mreq_n_ff;
+    //reg ex_bus_iorq_n_ff;
+    //reg ex_bus_mreq_n_ff;
     localparam IDLE_ISO = 2'd0;
     localparam ACTIVE_ISO = 2'd1;
     localparam WAIT_ISO = 2'd2;
     reg [1:0] state_iso;
     reg [2:0] counter_iso;
-    wire io_active;
+    //wire io_active;
 
     //assign ex_bus_rd_n = ( bus_rd_n | ex_bus_rd_n_ff | bus_disable);
     assign ex_bus_rd_n = bus_rd_n;
@@ -536,6 +706,7 @@ end
 
 `ifdef ENABLE_WAIT
     wire wait_io;
+    wire internal_req;
     reg wait_io_ff = 1;
     reg [6:0] wait_cycles;
     reg [6:0] state_wait;
@@ -547,6 +718,45 @@ end
 
     assign wait_io = wait_io_ff;
 
+
+    assign internal_req = 0 |
+                `ifdef ENABLE_V9958
+                     ( vdp_req == 1) |
+                `endif
+                `ifdef ENABLE_MAPPER
+                     ( mapper_req == 1) |
+                     ( mapper_reg_read == 1 ) |
+                `endif
+                     ( sram_req == 1 ) |
+                `ifdef ENABLE_BIOS
+                     ( exp_slot0_req == 1) |
+                     ( exp_slotx_req == 1) |
+                     ( bios_req == 1) |
+                     ( bios_missing_req == 1 ) |
+                     ( subrom_logo_req == 1 ) |
+                `endif
+                `ifdef ENABLE_SDCARD
+                     ( sd_cs_w == 1) |
+                     ( sram_cs_w == 1) |
+                     ( megarom_req == 1) |
+                     //( slot3_req_r == 1) |
+                 `endif
+                `ifdef ENABLE_SOUND
+                     //( scc_req3_r == 1 ) |
+                     ( megaram_req == 1 ) |
+                `endif
+                `ifdef ENABLE_CONFIG
+                     ( config_req == 1 ) |
+                `endif
+                     ( kanji_driver_req == 1 ) |
+                     ( kanji_data_req == 1 ) |
+                `ifdef ENABLE_WIFI
+                     ( wifi_req == 1 ) |
+                     ( f2_req == 1 ) |
+                     ( uart_req == 1 ) |
+                `endif
+                     ( rtc_req == 1 );
+
   `ifndef ENABLE_WAIT_ADAPTIVE
     always @ (posedge clk_54m) begin
         if (~bus_reset_n) begin
@@ -556,20 +766,46 @@ end
         else begin
             case (state_wait)
                 WAIT_IDLE: begin
-                    if ( ram_write == 1 || (ex_bus_iorq_n == 0 || ( config_enable_wait == 1 && ex_bus_mreq_n == 0 ) )&& (bus_rd_n == 0 || bus_wr_n == 0) ) begin
+                    if ( config_enable_wait == 1 && ( bus_iorq_n == 0 || bus_mreq_n == 0 ) && (bus_rd_n == 0 || bus_wr_n == 0) ) begin
+                        if (config_enable_turbo == 0) begin 
+                            if (bus_rd_n == 0) begin
+                                wait_cycles <= 7'd1;
+                            end
+                            else begin
+                                wait_cycles <= 7'd4;
+                            end
+                        end
+                        else begin 
+                            if (bus_rd_n == 0) begin
+                                wait_cycles <= 7'd2;
+                            end
+                            else begin
+                                wait_cycles <= 7'd6;
+                            end
+                        end
                         wait_io_ff <= 0;
                         state_wait <= WAIT_STATE1;
                     end
                 end
                 WAIT_STATE1: begin
-                    if ( clk_enable_3m6_54 == 1 ) begin
+                    if (internal_req == 1) begin
+                        wait_io_ff <= 1;
+                        state_wait <= WAIT_STATE3;
+                    end
+                    else if ( main_clk_enable == 1 ) begin
+                        wait_cycles <= wait_cycles - 1;
                         state_wait <= WAIT_STATE2;
                     end
                 end
                 WAIT_STATE2: begin
-                    if ( clk_falling_3m6_54 == 1 ) begin
-                        wait_io_ff <= 1;
-                        state_wait <= WAIT_STATE3;
+                    if ( main_clk_falling == 1 ) begin
+                        if ( wait_cycles == 0 ) begin
+                            wait_io_ff <= 1;
+                            state_wait <= WAIT_STATE3;
+                        end
+                        else begin
+                            state_wait <= WAIT_STATE1;
+                        end
                     end
                 end
                 WAIT_STATE3: begin
@@ -580,6 +816,56 @@ end
             endcase
         end
     end
+
+    reg [6:0] state_wait_addr;
+    reg wait_addr_ff;
+    reg [6:0] wait_cycles_addr;
+    wire wait_addr;
+    assign wait_addr = wait_addr_ff;
+    always @ (posedge clk_54m) begin
+        if (~bus_reset_n) begin
+            state_wait_addr <= WAIT_IDLE;
+            wait_addr_ff <= 1;
+        end 
+        else begin
+            case (state_wait_addr)
+                WAIT_IDLE: begin
+                    if ( config_enable_turbo == 1 && config_enable_wait == 1 && update_addr == 1 ) begin
+                        wait_cycles_addr <= 2;
+                        wait_addr_ff <= 0;
+                        state_wait_addr <= WAIT_STATE1;
+                    end
+                end
+                WAIT_STATE1: begin
+                    if (bus_rfsh_n == 0) begin
+                        wait_addr_ff <= 1;
+                        state_wait_addr <= WAIT_STATE3;
+                    end
+                    else if ( main_clk_falling == 1 ) begin
+                        wait_cycles_addr <= wait_cycles_addr - 1;
+                        state_wait_addr <= WAIT_STATE2;
+                    end
+                end
+                WAIT_STATE2: begin
+                    if ( main_clk_enable == 1 ) begin
+                        if ( wait_cycles_addr == 0 ) begin
+                            wait_addr_ff <= 1;
+                            state_wait_addr <= WAIT_STATE3;
+                        end
+                        else begin
+                            state_wait_addr <= WAIT_STATE1;
+                        end
+                    end
+                end
+                WAIT_STATE3: begin
+                    if ( update_addr == 0) begin
+                        state_wait_addr <= WAIT_IDLE;
+                    end
+                end
+            endcase
+        end
+    end
+
   `else
     always @ (posedge clk_54m) begin
         if (~bus_reset_n) begin
@@ -602,12 +888,12 @@ end
                     end
                 end
                 WAIT_STATE2: begin
-                    if ( ram_busy == 0 && clk_enable_3m6_54 == 1 ) begin
+                    if ( ram_busy == 0 && main_clk_enable == 1 ) begin
                         state_wait <= WAIT_STATE3;
                     end
                 end
                 WAIT_STATE3: begin
-                    if ( clk_falling_3m6_54 == 1 ) begin
+                    if ( main_clk_falling == 1 ) begin
                         wait_io_ff <= 1;
                         state_wait <= WAIT_STATE4;
                     end
@@ -625,6 +911,65 @@ end
 `endif
 
     wire update_addr;
+    wire cpu_clk_54;
+    wire main_clk_enable;
+    wire main_clk_falling;
+    wire cpu_clk_enable;
+    wire cpu_clk_falling;
+    wire cpu_wait_n;
+    wire cpu_int_n;
+
+    // Glitch-free clock selection: switch only when both sources are stable-low.
+    wire   safe_to_switch_clk = (bus_clk_3m6    == 0 && bus_clk_3m6_54    == 0) &&
+                                 (clk_6m75_54    == 0 && bus_clk_6m75_54   == 0);
+    reg    turbo_safe;
+    reg    switch_clk_pending;
+    always @ (posedge clk_54m) begin
+        if (bus_reset_n == 0) begin
+            turbo_safe            <= config_enable_turbo;
+            switch_clk_pending <= 0;
+        end else begin
+            if (config_enable_turbo != turbo_safe)
+                switch_clk_pending <= 1;
+            if (switch_clk_pending && safe_to_switch_clk) begin
+                turbo_safe            <= config_enable_turbo;
+                switch_clk_pending <= 0;
+            end
+        end
+    end
+
+    assign cpu_clk_54     = (turbo_safe == 1) ? clk_6m75_54 : bus_clk_3m6_54;
+    assign main_clk_enable  = (turbo_safe == 1) ? clk_enable_6m75_54 : clk_enable_3m6_54;
+    assign main_clk_falling = (turbo_safe == 1) ? clk_falling_6m75_54 : clk_falling_3m6_54;
+
+    `ifdef ENABLE_WAIT
+        assign cpu_clk_enable  = main_clk_enable & wait_io & wait_addr;
+        assign cpu_clk_falling = main_clk_falling & wait_io & wait_addr;
+    `else
+        assign cpu_clk_enable  = main_clk_enable;
+		assign cpu_clk_falling = main_clk_falling;
+    `endif
+
+    `ifdef ENABLE_WIFI
+      `ifndef ENABLE_WAIT_ADAPTIVE
+        assign cpu_wait_n = (bus_wait_n | config_enable_turbo) & wait_uart;
+      `else
+        assign cpu_wait_n = wait_uart;
+      `endif
+    `else
+      `ifndef ENABLE_WAIT_ADAPTIVE
+        assign cpu_wait_n = bus_wait_n | config_enable_turbo;
+      `else
+        assign cpu_wait_n = 1;
+      `endif
+    `endif
+
+    `ifdef ENABLE_V9958
+        assign cpu_int_n = bus_int_n & vdp_int;
+    `else
+        assign cpu_int_n = bus_int_n;
+    `endif
+
     G80a  #(
         .Mode    (0),     // 0 => Z80, 1 => Fast Z80, 2 => 8080, 3 => GB
         //.T2Write (0),     //0 => WR_n active in T3, /=0 => WR_n active in T2
@@ -632,31 +977,10 @@ end
     ) cpu1 (
         .RESET_n   (bus_reset_n & reset3_n & flash_idle),
         .CLK_n     (clk_54m),
-    `ifdef ENABLE_WAIT
-        .clk_enable (clk_enable_3m6_54 & wait_io ),
-        .clk_falling (clk_falling_3m6_54 & wait_io ),
-    `else
-        .clk_enable (clk_enable_3m6_54),
-		.clk_falling (clk_falling_3m6_54),
-    `endif
-    `ifdef ENABLE_WIFI
-      `ifndef ENABLE_WAIT_ADAPTIVE
-        .WAIT_n    (bus_wait_n & wait_uart),
-      `else
-        .WAIT_n    (wait_uart),
-      `endif
-    `else
-      `ifndef ENABLE_WAIT_ADAPTIVE
-        .WAIT_n    (bus_wait_n),
-      `else
-        .WAIT_n    (1),
-      `endif
-    `endif
-    `ifdef ENABLE_V9958
-        .INT_n     (bus_int_n & vdp_int),
-    `else
-        .INT_n     (bus_int_n),
-    `endif
+        .clk_enable (cpu_clk_enable),
+        .clk_falling (cpu_clk_falling),
+        .WAIT_n    (cpu_wait_n),
+        .INT_n     (cpu_int_n),
         .NMI_n     (1),
         .BUSRQ_n   (1),
         .M1_n      (bus_m1_n),
@@ -688,7 +1012,7 @@ end
     assign ppi_req_r = (bus_addr[7:0] == 8'ha8 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1:0;
     assign ppi_req_w = (bus_addr[7:0] == 8'ha8 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
 
-    always @ (posedge clk_27m or negedge bus_reset_n) begin
+    always @ (posedge clk_54m) begin
         if ( bus_reset_n == 0)
             ppi_port_a <= 8'h00;
         else begin
@@ -704,11 +1028,13 @@ end
     wire [3:0] exp_slot0_num;
     reg exp_slot0_req_r;
     reg exp_slot0_req_w;
+    wire exp_slot0_req;
     reg [7:0] exp_slotx;
     wire [1:0] exp_slotx_page;
     wire [3:0] exp_slotx_num;
     reg exp_slotx_req_r;
     reg exp_slotx_req_w;
+    wire exp_slotx_req;
     wire xffff;
     reg xffh;
     reg xffl;
@@ -720,6 +1046,8 @@ end
         exp_slotx_req_w <= ( bus_mreq_n == 0 && bus_wr_n == 0 && xffh == 1 && xffl == 1 && pri_slot_num[SD_SLOT] == 1 ) ? 1: 0;
         exp_slotx_req_r <= ( bus_mreq_n == 0 && bus_rd_n == 0 && xffh == 1 && xffl == 1 && pri_slot_num[SD_SLOT] == 1 ) ? 1: 0;
     end
+    assign exp_slot0_req = exp_slot0_req_r | exp_slot0_req_w;
+    assign exp_slotx_req = exp_slotx_req_r | exp_slotx_req_w;
     //assign xffff = ( bus_addr == 16'hffff ) ? 1 : 0;
     assign xffff = xffh & xffl;
 
@@ -727,7 +1055,7 @@ end
 //    assign exp_slotx_req_r = ( bus_mreq_n == 0 && bus_rd_n == 0 && xffff == 1 && pri_slot_num[0] == 1 ) ? 1: 0;
 
     // slot #0
-    always @ (posedge clk_27m or negedge bus_reset_n) begin
+    always @ (posedge clk_54m) begin
         if ( bus_reset_n == 0 )
             exp_slot0 <= 8'h00;
         else begin
@@ -738,7 +1066,7 @@ end
     end
 
     // slot #3
-    always @ (posedge clk_27m or negedge bus_reset_n) begin
+    always @ (posedge clk_54m) begin
         if ( bus_reset_n == 0 )
             exp_slotx <= 8'h00;
         else begin
@@ -793,24 +1121,24 @@ end
 `ifdef ENABLE_BIOS
     //bios
     reg bios_req;
-    wire [7:0] bios_dout;
+    //wire [7:0] bios_dout;
     always @ (posedge clk_54m) begin
-        bios_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[0] == 1 && exp_slot0_num[0] == 1) ? 1 : 0;
+        bios_req <= ( bios_missing == 0 && bus_mreq_n == 0 && bus_rd_n == 0 && bus_addr[15] == 0 && pri_slot_num[0] == 1 && exp_slot0_num[0] == 1) ? 1 : 0;
     end
 
     //subrom
-    reg subrom_req;
-    wire [7:0] subrom_dout;
-    always @ (posedge clk_54m) begin
-        subrom_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[SD_SLOT] == 1 && page_num[0] == 1 && exp_slotx_num[1] == 1 ) ? 1 : 0;
-    end
+    //reg subrom_req;
+    //wire [7:0] subrom_dout;
+    //always @ (posedge clk_54m) begin
+    //    subrom_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[SD_SLOT] == 1 && page_num[0] == 1 && exp_slotx_num[1] == 1 ) ? 1 : 0;
+    //end
 
     //msx logo
-    reg msx_logo_req;
-    wire [7:0] msx_logo_dout;
-    always @ (posedge clk_54m) begin
-        msx_logo_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && page_num[1] == 1 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[1] == 1 ) ? 1 : 0;
-    end
+    //reg msx_logo_req;
+    //wire [7:0] msx_logo_dout;
+    //always @ (posedge clk_54m) begin
+    //    msx_logo_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && page_num[1] == 1 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[1] == 1 ) ? 1 : 0;
+    //end
 
     //subrom + logo
     reg subrom_logo_req;
@@ -824,14 +1152,44 @@ end
         kanji_driver_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && (page_num[1] == 1 || page_num[2] == 1) && pri_slot_num[0] == 1 && exp_slot0_num[1] == 1 ) ? 1 : 0;
     end
 
+    //ram
+    reg sram_req_r;
+    reg sram_req_w;
+    wire sram_req;
+    wire [7:0] sram_dout;
+    always @ (posedge clk_54m) begin
+        sram_req_r <= ( config_enable_mapper12 == 0 && config_enable_mapper3 == 0 && bus_mreq_n == 0 && bus_rd_n == 0 && pri_slot_num[SD_SLOT] == 1 && bus_addr[15] == 1 && exp_slotx_num[0] == 1 && xffff == 0 ) ? 1 : 0;
+        sram_req_w <= ( config_enable_mapper12 == 0 && config_enable_mapper3 == 0 && bus_mreq_n == 0 && bus_wr_n == 0 && pri_slot_num[SD_SLOT] == 1 && bus_addr[15] == 1 && exp_slotx_num[0] == 1 && xffff == 0 ) ? 1 : 0;
+    end
+    assign sram_req = sram_req_r | sram_req_w;
+
+    ram8k ram1 (
+        .clk (clk_54m),
+        .we (sram_req_w),
+        .addr (bus_addr[12:0]),
+        .din (cpu_dout),
+        .dout (sram_dout)
+    );
+
+    //bios_missing
+    reg bios_missing_req;
+    wire [7:0] bios_missing_dout;
+    always @ (posedge clk_54m) begin
+        bios_missing_req <= ( bios_missing == 1 && bus_mreq_n == 0 && bus_rd_n == 0 && bus_addr[15] == 0 && pri_slot_num[0] == 1 && exp_slot0_num[0] == 1) ? 1 : 0;
+    end
+    bios_missing bm1 (
+        .clk (clk_54m),
+        .addr (bus_addr[7:0]),
+        .dout (bios_missing_dout)
+    );
 
 `else
 
     wire bios_req;
     wire [7:0] bios_dout;
-    wire subrom_req;
+    //wire subrom_req;
     wire [7:0] subrom_dout;
-    wire msx_logo_req;
+    //wire msx_logo_req;
     wire [7:0] msx_logo_dout;
     wire kanji_driver_req;
     wire subrom_logo_req;
@@ -872,9 +1230,11 @@ end
     //rtc
     wire rtc_req_r;
     wire rtc_req_w;
+    wire rtc_req;
     wire [7:0] rtc_dout;
     assign rtc_req_w = (bus_addr[7:1] == 7'b1011010 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1 : 0; // I/O:B4-B5h   / RTC
     assign rtc_req_r = (bus_addr[7:1] == 7'b1011010 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1 : 0; // I/O:B4-B5h   / RTC
+    assign rtc_req = rtc_req_w | rtc_req_r;
 
     rtc rtc1(
         .clk21m(clk_27m),
@@ -891,28 +1251,27 @@ end
     //vdp
 	wire vdp_csw_n; //VDP write request
 	wire vdp_csr_n; //VDP read request	
+    wire vdp_req;
     wire [7:0] vdp_dout;
     wire vdp_int;
     wire WeVdp_n;
     wire [16:0] VdpAdr;
-    wire [15:0] VrmDbi;
+    //wire [15:0] VrmDbi;
     wire [7:0] VrmDbo;
     wire VideoDHClk;
     wire VideoDLClk;
     assign vdp_csw_n = (bus_addr[7:2] == 6'b100110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 0:1; // I/O:98-9Bh   / VDP (V9938/V9958)
     assign vdp_csr_n = (bus_addr[7:2] == 6'b100110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 0:1; // I/O:98-9Bh   / VDP (V9938/V9958)
+    assign vdp_req = ~(vdp_csw_n & vdp_csr_n);
 
+`ifdef ENABLE_V9958
     v9958_top vdp4 (
         .clk (clk_27m),
         .s1 (0),
         .clk_50 (0),
         .clk_125 (0),
 
-    `ifdef ENABLE_V9958
         .reset_n (bus_reset_n ),
-    `else
-        .reset_n (0),
-    `endif
         .mode    (bus_addr[1:0]),
         .csw_n   (vdp_csw_n),
         .csr_n   (vdp_csr_n),
@@ -952,6 +1311,20 @@ end
         .tmds_data_p   (data_p),
         .tmds_data_n   (data_n)
     );
+`else // ENABLE_V9958
+    // Generate 13.5 MHz (DH) and 6.75 MHz (DL) from clk_27m when VDP is disabled
+    reg [1:0] vdp_clk_div = 2'b00;
+    always @(posedge clk_27m) vdp_clk_div <= vdp_clk_div + 1;
+    assign VideoDHClk = ~vdp_clk_div[0];
+    assign VideoDLClk = vdp_clk_div[1];
+    // VDP outputs consumed by memory controller
+    assign WeVdp_n = 1'b1;
+    assign VdpAdr  = 17'h0;
+    assign VrmDbo  = 8'h0;
+    // VDP outputs consumed by other modules
+    assign vdp_int  = 1'b1;
+    assign vdp_dout = 8'h00;
+`endif // ENABLE_V9958
 
 `ifdef ENABLE_MAPPER
     //mapper
@@ -966,7 +1339,9 @@ end
     reg [7:0] mapper_reg1;
     reg [7:0] mapper_reg2;
     reg [7:0] mapper_reg3;
+    wire mapper_reg_read;
     wire mapper_reg_write;
+    wire [7:0] mapper_reg_dout;
 
     assign mapper_addr = (bus_addr [15:14] == 2'b00 ) ? { mapper_reg0, bus_addr[13:0] } :
                          (bus_addr [15:14] == 2'b01 ) ? { mapper_reg1, bus_addr[13:0] } :
@@ -980,9 +1355,14 @@ end
     assign mapper_req = mapper_req3 | mapper_req12;
     assign mapper_read = mapper_req & ~bus_rd_n;
     assign mapper_write = mapper_req & ~bus_wr_n;
+    assign mapper_reg_read = ( bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0 && (bus_addr [7:2] == 6'b111111) )?1:0;
     assign mapper_reg_write = ( (bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0) && (bus_addr [7:2] == 6'b111111) )?1:0;
 
-    always @(posedge clk_27m or negedge bus_reset_n) begin
+    assign mapper_reg_dout = ( bus_addr [1:0] == 2'b00 ) ? mapper_reg0 :
+                             ( bus_addr [1:0] == 2'b01 ) ? mapper_reg1 :
+                             ( bus_addr [1:0] == 2'b10 ) ? mapper_reg2 : mapper_reg3;
+
+    always @(posedge clk_54m) begin
         if (bus_reset_n == 0) begin
             mapper_reg0	<= 8'b00000011;
             mapper_reg1	<= 8'b00000010;
@@ -1103,7 +1483,7 @@ end
     assign ram_din = (~flash_idle) ? { rom_dout, rom_dout }  : { cpu_dout, cpu_dout };
 
 memory_ctrl mem1 (
-    .clk_27m(clk_54m),
+    .clk_54m(clk_54m),
     .clk_108m(clk_108m),
     .bus_reset_n(bus_reset_n ),
     .video_dhclk(VideoDHClk),
@@ -1144,7 +1524,7 @@ memory_ctrl mem1 (
     wire psgBc1;
     wire iorq_wr_n;
     wire iorq_rd_n;
-    wire [7:0] psg_dout;
+    //wire [7:0] psg_dout;
     wire [7:0] psgSound1;
     wire [7:0] psgPA;
     wire [7:0] psgPB;
@@ -1154,7 +1534,7 @@ memory_ctrl mem1 (
     assign psgBdir = ( bus_addr[7:3]== 5'b10100 && iorq_wr_n == 0 && bus_addr[1]== 0 ) ?  1 : 0; // I/O:A0-A2h / PSG(AY-3-8910) bdir = 1 when writing to &HA0-&Ha1
     assign psgBc1 = ( bus_addr[7:3]== 5'b10100 && ((iorq_rd_n==0 && bus_addr[1]== 1) || (bus_addr[1]==0 && iorq_wr_n==0 && bus_addr[0]==0))) ? 1 : 0; // I/O:A0-A2h / PSG(AY-3-8910) bc1 = 1 when writing A0 or reading A2
     assign psgPA =8'h00;
-    reg psgPB = 8'hff;
+    //reg psgPB = 8'hff;
 
     wire clk_enable_1m8;
     reg clk_1m8_prev;
@@ -1180,7 +1560,7 @@ memory_ctrl mem1 (
         .O_IOA(),
         .O_IOA_OE_L(),
         .I_IOB(psgPB),
-        .O_IOB(psgPB),
+        .O_IOB( ),
         .O_IOB_OE_L(),
         
         .ENA(clk_enable_1m8), // clock enable for higher speed operation
@@ -1200,9 +1580,9 @@ memory_ctrl mem1 (
 
     //opll
     wire opll_req_n; 
-    wire [9:0] opll_mo;
-    wire [9:0] opll_ro;
-    reg [11:0] opll_mix;
+    //wire [9:0] opll_mo;
+    //wire [9:0] opll_ro;
+    //reg [11:0] opll_mix;
     wire [15:0] jt2413_wav;
 
     assign opll_req_n = ( bus_iorq_n == 1'b0 && bus_addr[7:1] == 7'b0111110  &&  bus_wr_n == 1'b0 )  ? 1'b0 : 1'b1;    // I/O:7C-7Dh   / OPLL (YM2413)
@@ -1231,7 +1611,7 @@ memory_ctrl mem1 (
     wire scc_wrt;
     
     reg x98h;
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         x98h <= ( bus_addr[15:8] == 8'h98 ) ? 1 : 0;
     end
 
@@ -1239,13 +1619,13 @@ memory_ctrl mem1 (
     reg scc_enable_req3;
     reg scc_enable_req12;
     wire scc_enable_req;
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         scc_enable_req3 <= ( bus_addr[15:11] == 5'b10010 && bus_mreq_n == 0 && bus_wr_n == 0 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[3] == 1 ) ? 1 : 0;
         scc_enable_req12 <= ( config_enable_megaram12 == 1 && bus_addr[15:11] == 5'b10010 && bus_mreq_n == 0 && bus_wr_n == 0 && pri_slot == config_megaram_slot ) ? 1 : 0;
     end
     assign scc_enable_req = scc_enable_req3 | scc_enable_req12;
 
-    always @ (posedge clk_27m or negedge bus_reset_n) begin
+    always @ (posedge clk_54m) begin
         if ( bus_reset_n == 0)
             scc_bank2 <= 8'h00;
         else begin
@@ -1258,7 +1638,7 @@ memory_ctrl mem1 (
     wire scc_enable;
     assign scc_enable = ( scc_bank2 == 8'h3f ) ? 1 : 0;
 
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         scc_req3 <= ( config_enable_megaram3 == 1 && scc_enable == 1 && x98h == 1 && bus_mreq_n == 0 && (bus_wr_n == 0 || bus_rd_n == 0 ) && pri_slot == config_megaram_slot && exp_slotx_num[3] == 1  ) ? 1 : 0;
         scc_req12 <= ( config_enable_megaram12 == 1 && scc_sound_disable == 0 && scc_enable == 1 && x98h == 1 && bus_mreq_n == 0 && (bus_wr_n == 0 || bus_rd_n == 0 ) && pri_slot == config_megaram_slot ) ? 1 : 0;
     end
@@ -1282,14 +1662,14 @@ memory_ctrl mem1 (
     reg scc2_req3;
     reg scc2_req12;
     wire scc2_req;
-    wire scc2_req_r;
+    //wire scc2_req_r;
     wire scc2_wrt;
-    wire [7:0] scc2_dout;
-    wire [14:0] scc2_wav;
+    //wire [7:0] scc2_dout;
+    //wire [14:0] scc2_wav;
     wire megaram_req;
     wire megaram_wrt;
     wire [20:0] megaram_addr;
-    wire megaram_enabled;
+    //wire megaram_enabled;
 
     always @ (posedge clk_54m) begin
         scc2_req3 <= ( config_enable_ghost_scc == 0 && config_enable_megaram3 == 1 && bus_mreq_n == 0 && (bus_rd_n == 0 || bus_wr_n == 0 ) && pri_slot == config_megaram_slot && exp_slotx_num[3] == 1  && xffff == 0) ? 1 : 0;
@@ -1297,7 +1677,7 @@ memory_ctrl mem1 (
         //scc2_req <= ( bus_mreq_n == 0 && (bus_rd_n == 0 || bus_wr_n == 0 ) && pri_slot_num[2] == 1 ) ? 1 : 0;
     end
     assign scc2_req = scc2_req3 | scc2_req12;
-    assign scc2_req_r = ( scc2_req == 1 && bus_rd_n == 0 ) ? 1 : 0;
+    //assign scc2_req_r = ( scc2_req == 1 && bus_rd_n == 0 ) ? 1 : 0;
     assign scc2_wrt = ( scc2_req == 1 && bus_wr_n == 0 ) ? 1 : 0;
 
     wire [1:0] map_sel;
@@ -1326,9 +1706,9 @@ memory_ctrl mem1 (
 
 
     //mixer
-    reg [23:0] fm_wav;
-    reg [16:0] fm_mix;
-    reg [14:0] scc_wav2;
+    //reg [23:0] fm_wav;
+    //reg [16:0] fm_mix;
+    //reg [14:0] scc_wav2;
 	reg [15:0] audio_sample;
 
     always @ (posedge clk_27m) begin
@@ -1346,7 +1726,7 @@ memory_ctrl mem1 (
     wire [14:0] scc2_wav;
     wire megaram_req;
     wire [20:0] megaram_addr;
-    wire megaram_enabled;
+    //wire megaram_enabled;
     wire [15:0] audio_sample;
     wire megaram_wrt;
 
@@ -1355,11 +1735,13 @@ memory_ctrl mem1 (
     //kanji data
     wire kanji_data_req_r;
     wire kanji_data_req_w;
+    wire kanji_data_req;
     wire kanji_data_ram_req;
-    reg [7:0] kanji_data_dout;
+    //reg [7:0] kanji_data_dout;
     wire [17:0] kanji_data_ram_addr;
     assign kanji_data_req_w = (bus_addr[7:2] == 6'b110110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1 : 0; // I/O:B4-B5h   / I/O:D8-DBh / Kanji-data
     assign kanji_data_req_r = (bus_addr[7:2] == 6'b110110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1 : 0; // I/O:B4-B5h   / I/O:D8-DBh / Kanji-data
+    assign kanji_data_req = kanji_data_req_w | kanji_data_req_r;
 
     kanji kanji1(
         .clk21m(clk_27m),
@@ -1376,12 +1758,14 @@ memory_ctrl mem1 (
     //f2 port
     wire f2_req_r;
     wire f2_req_w;
+    wire f2_req;
     reg [7:0] f2_port;
 
     assign f2_req_r = (bus_addr[7:0] == 8'hf2 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1:0;
     assign f2_req_w = (bus_addr[7:0] == 8'hf2 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
+    assign f2_req = f2_req_r | f2_req_w;
 
-    always @ (posedge clk_27m or negedge bus_reset_n) begin
+    always @ (posedge clk_54m) begin
         if ( bus_reset_n == 0)
             f2_port <= 8'h00;
         else begin
@@ -1413,14 +1797,16 @@ memory_ctrl mem1 (
     wire config_enable_ghost_scc;
     reg config_enable_sdcard;
     wire config_enable_wait;
+    wire config_enable_turbo;
     reg config_reset_ff;
     reg config_flash_write_ff;
-    reg config_update;
+    reg config1_update;
+    reg config2_update;
     wire config_enable_scanlines;
     wire [1:0] config_mapper_slot;
     wire [1:0] config_megaram_slot;
     wire [1:0] config_sdcard_slot;
-    wire [1:0] config_keyboard;
+    //wire [1:0] config_keyboard;
     wire config0_req;
     wire config1_req;
     wire config2_req;
@@ -1430,21 +1816,22 @@ memory_ctrl mem1 (
     wire [7:0] config_dout;
     wire config_req;
 
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         config_reset_ff <= 0;
         config_flash_write_ff <= 0;
-        config_update <= 0;
-        if (clk_enable_3m6_27 == 1 ) begin
+        config1_update <= 0;
+        config2_update <= 0;
+        if (cpu_clk_54 == 1 ) begin
             if (config0_req == 1 ) begin
                 config0_ff <= ~cpu_dout;
             end
 
             if (config1_req == 1 ) begin
-                config_update <= 1;
+                config1_update <= 1;
                 config1_temp_ff <= cpu_dout;
             end
             if (config2_req == 1 ) begin
-                config_update <= 1;
+                config2_update <= 1;
                 config2_temp_ff <= cpu_dout[5:0];
                 if ( cpu_dout[6] == 1) begin
                     config_flash_write_ff <= 1;
@@ -1458,7 +1845,7 @@ memory_ctrl mem1 (
 
     reg [2:0] ocm_slot2_prev; //bit2 = linear ,bits 1,0 = mode
     reg ocm_update;
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         ocm_update <= 0;
         if ( { iSlt2_linear, Slot2Mode } != ocm_slot2_prev ) begin
             ocm_update <= 1;
@@ -1466,7 +1853,7 @@ memory_ctrl mem1 (
     end
 
     reg config_init_delay = 0;
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         config_init_delay <= config_init;
         if (config_init == 1 ) begin
             if (s2 == 1) begin
@@ -1478,8 +1865,10 @@ memory_ctrl mem1 (
                 config2_ff <= config_sig[3];
             end
         end
-        if (config_update == 1) begin
+        if (config1_update == 1) begin
             config1_ff <= config1_temp_ff;
+        end
+        if (config2_update == 1) begin
             config2_ff <= config2_temp_ff;
         end
         if (ocm_update == 1) begin
@@ -1502,6 +1891,7 @@ memory_ctrl mem1 (
     assign config2_req = (config_ok == 1 && bus_addr[7:0] == 8'h42 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
     assign config_enable_scanlines = config1_ff[3];
     //assign config_keyboard = config2_ff[4:3];
+    assign config_enable_turbo = config2_ff[4];
     assign config_enable_wait = config2_ff[3];
     assign config_req = (bus_addr[7:4] == 4'h4 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1:0;
     assign config_dout = ( bus_addr[3:0] == 4'h0 ) ? config0_ff :
@@ -1520,7 +1910,7 @@ memory_ctrl mem1 (
         end
     end
     assign config_mapper_slot = config_mapper_slot_ff;
-    assign config_megaram_slot = config1_ff[7:6];;
+    assign config_megaram_slot = config1_ff[7:6];
     assign config_sdcard_slot = config_sdcard_slot_ff;
     assign config_enable_megaram = config1_ff[1];
     assign config_enable_megaram3 = (config1_ff[1] == 1 && config1_ff[7:6] == 2'b11);
@@ -1555,6 +1945,7 @@ memory_ctrl mem1 (
     assign config_sdcard_slot= 2'b11;
     assign config_reset = 0;
     assign config_enable_wait = 0;
+    assign config_enable_turbo = 0;
 
 `endif
 
@@ -1637,7 +2028,7 @@ memory_ctrl mem1 (
     wire flash_idle;
     assign flash_idle = (ff_flash_state == STATE_IDLE ) ? 1'b1 : 1'b0;
     
-    always @(posedge clk_54m, negedge reset3_n) begin
+    always @(posedge clk_54m) begin
     if (reset3_n == 0) begin
         ff_flash_state = STATE_RESET;
         ff_flash_rd <= 0;
@@ -1731,12 +2122,13 @@ memory_ctrl mem1 (
     // configuration + signature
     reg [7:0] config_sig [0:5];
     reg [2:0] last_bytes_cnt;
+    reg bios_missing;
     wire new_byte;
     wire config_init;
     assign new_byte = (~ff_flash_rd && flash_busy == 0);
     assign config_init = (config_sig[0] == 8'h41 && config_sig[1] == 8'h42 && last_bytes_cnt == 3'd1) ? 1 : 0;
 
-    always @(posedge clk_54m or negedge reset3_n) begin
+    always @(posedge clk_54m) begin
         if (!reset3_n) begin
             last_bytes_cnt <= 3'd0;
             config_sig[0] <= 8'd0;
@@ -1745,7 +2137,11 @@ memory_ctrl mem1 (
             config_sig[3] <= 8'd0;
             config_sig[4] <= 8'd0;
             config_sig[5] <= 8'd0;
+            bios_missing <= 1;
         end else begin
+            if (config_init == 1) begin
+                bios_missing <= 0;
+            end
             if (ff_flash_counter == 32'd6)
                 last_bytes_cnt <= 3'd6;
             if (new_byte && last_bytes_cnt != 3'd0) begin
@@ -1781,15 +2177,13 @@ memory_ctrl mem1 (
     assign megarom_page = megarom_page_ff;
     assign megarom_addr = { megarom_page, bus_addr[13:0] };
 
-    always @(posedge clk_27m or negedge bus_reset_n) begin
+    always @(posedge clk_54m) begin
         if (bus_reset_n == 0) begin
            megarom_page_ff <= 3'b0;
         end 
         else begin
-            if (bus_clk_3m6_27 == 1) begin
-                if (megarom_page_req == 1) begin
-                    megarom_page_ff <= cpu_dout[2:0]; // select page
-                end
+            if (megarom_page_req == 1) begin
+                megarom_page_ff <= cpu_dout[2:0]; // select page
             end
         end
     end
@@ -1872,8 +2266,8 @@ memory_ctrl mem1 (
     
     wire [8:0] sram_addr_w;
     reg ff_sram_we = 0;
-    reg [7:0] ff_sram_cdin;
-    reg [7:0] ff_sram_cdout;
+    //reg [7:0] ff_sram_cdin;
+    //reg [7:0] ff_sram_cdout;
     //
     reg ff_sd_en = 0;
     reg sram_cs_w;
@@ -1906,23 +2300,35 @@ memory_ctrl mem1 (
     //reg ff_scc_enable;
     //wire scc_enable_w;
     //assign scc_enable_w = ff_scc_enable;
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         sram_cs_w <= config_enable_sdcard == 1 && bus_reset_n && ff_sd_en && bus_iorq_n == 1 && bus_m1_n == 1 && bus_mreq_n == 0 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[2] == 1 && ( bus_addr >= SDC_SDATA && bus_addr < SDC_ENABLE) ? 1 : 0;
     end
     assign sram_busreq_w = sram_cs_w && ~bus_rd_n;
-    
+
+    // El WRE del buffer SD (dpram1) salia de un AND combinacional (pulso cpu_clk_54 +
+    // sram_cs_w + ~bus_wr_n) directo a la BSRAM -> hold critico (0.060 ns), corrompia
+    // el buffer al colocarse rapido -> cuelgues SD aleatorios. Se registran wren_a y
+    // data_a en clk_54m: FF -> RAM con hold robusto. bus_addr/cpu_dout son estables
+    // todo el ciclo Z80, asi que el write (1 ciclo mas tarde) cae en la misma celda.
+//    reg       sd_wren_a_r;
+//    reg [7:0] sd_data_a_r;
+//    always @(posedge clk_54m) begin
+//        sd_wren_a_r <= cpu_clk_54 && sram_cs_w && ~bus_wr_n;
+//        sd_data_a_r <= cpu_dout;
+//    end
+
     dpram#(
         .widthad_a(9),
         .width_a(8)
     ) dpram1 (
-        .clock_a(clk_27m),
-        .wren_a(bus_clk_3m6_27 && sram_cs_w && ~bus_wr_n),
-        .rden_a(bus_clk_3m6_27 && sram_cs_w && ~bus_rd_n),
+        .clock_a(clk_54m),
+        .wren_a(cpu_clk_54 && sram_cs_w && ~bus_wr_n),
+        .rden_a(cpu_clk_54 && sram_cs_w && ~bus_rd_n),
         .address_a(bus_addr[8:0]),
         .data_a(cpu_dout),
         .q_a(sram_cd_w),
     
-        .clock_b(clk_27m),
+        .clock_b(clk_54m),
         .wren_b(ff_sd_rstart && sd_outen_w),
         .rden_b(ff_sd_wstart && sd_outen_w),
         .address_b(sd_outaddr_w),
@@ -1931,11 +2337,11 @@ memory_ctrl mem1 (
     );
     
     sd_reader #(
-        .CLK_DIV(3'd2),
+        .CLK_DIV(3'd3),
         .SIMULATE(0)
     ) sd1 (
         .rstn(bus_reset_n),
-        .clk(clk_27m),
+        .clk(clk_54m),
         .sdclk(sd_sclk),
         .sdcmd(sd_cmd),
         .sddat0(sd_dat0),                  
@@ -1967,7 +2373,7 @@ memory_ctrl mem1 (
     assign sd_dat3 = 1; // Must set sddat1~3 to 1 to avoid SD card from entering SPI mode
     
     
-    always @(posedge clk_27m or negedge bus_reset_n) begin
+    always @(posedge clk_54m) begin
         if (~bus_reset_n) begin
             ff_sd_en <= 0;
         end else begin
@@ -1977,7 +2383,7 @@ memory_ctrl mem1 (
     end
     
     reg sd_cs_w;
-    always @ (posedge clk_27m) begin
+    always @ (posedge clk_54m) begin
         sd_cs_w <= config_enable_sdcard == 1 && bus_reset_n && ff_sd_en && bus_iorq_n && bus_m1_n && bus_mreq_n == 0 && pri_slot_num[SD_SLOT] == 1 && exp_slotx_num[2] == 1 && (bus_addr >= SDC_ENABLE && bus_addr <= SDC_END) ? 1 : 0;
     end
     wire sd_busreq_w;
@@ -1986,7 +2392,7 @@ memory_ctrl mem1 (
     wire [7:0] sd_cd_w;
     assign sd_cd_w = ff_sd_cd;
     
-    always @(posedge clk_27m or negedge bus_reset_n) begin
+    always @(posedge clk_54m) begin
         if (~bus_reset_n) begin
             ff_sd_rstart <= '0;
             ff_sd_wstart <= '0;
@@ -2054,7 +2460,7 @@ memory_ctrl mem1 (
 
     // Switched I/O ports
     reg [1:0] Slot2Mode;
-    wire  swio_req;
+    //wire  swio_req;
     wire [7:0] io42_id212;
     wire iSlt2_linear;
     wire swio_req;

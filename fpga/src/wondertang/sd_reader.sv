@@ -291,7 +291,7 @@ always @ (posedge clk or negedge rstn)
                                 set_cmd(1, 128, 24, rsectoraddr);
                 CMD12	:   if(~timeout && ~syntaxe)
                                 sdcmd_stat <= IDLING;           // return idling after an error
-                default:		sdcmd_stat <= IDLING;	
+                default:		sdcmd_stat <= IDLING;
             endcase
         end
     end
@@ -395,61 +395,82 @@ always @ (posedge clk or negedge rstn)
                     outen  <= 1'b1;   // bring in first byte
                 end
                 WDURING : begin
-
+                    // BUG FIX: el incremento de ridx va DENTRO de cada rama (antes era una
+                    // asignacion incondicional al final que PISABA el 'ridx<=0' de la transicion
+                    // a WTAIL -> ridx entraba en WTAIL valiendo ~4116 -> 'if(ridx<3)' siempre
+                    // falso -> el muestreo del token CRC (3 bits) se saltaba -> crc_stat quedaba
+                    // en 000 -> crc_error FALSO en cada escritura). Ademas sddat_stat ahora es
+                    // siempre non-blocking (Gowin no permite mezclar blocking/non-blocking).
                     if (ridx < 512*8) begin
                         sddat0out <= inbyte[3'd7 - ridx[2:0]]; // send data bit
                         sddat0oe <= 1;
                         crc_bit <= inbyte[3'd7 - ridx[2:0]]; // crc in data bit
                         crc_ena <= 1;
+                        ridx   <= ridx + 1;
                     end else if (ridx < 512*8+16) begin
                         sddat0out <= crc_out[4'd15 - ridx[3:0]]; // send crc16
                         sddat0oe <= 1;
+                        ridx   <= ridx + 1;
                     end else if (ridx < 512*8+16+1) begin
                         sddat0out <= 1'b1;      // stop bit
                         sddat0oe <= 1;
+                        ridx   <= ridx + 1;
                     end else if (ridx < 512*8+16+1+2) begin
-                        sddat0oe <= 0;          // wait for crc status 2 cycles                   
+                        sddat0oe <= 0;          // wait for crc status 2 cycles
+                        ridx   <= ridx + 1;
                     end else begin
-                        if (!sddat0) begin      // wait for ack
-                            sddat_stat = WTAIL;
-                            ridx <= 0;
+                        if (!sddat0) begin      // start-bit del token CRC detectado
+                            sddat_stat <= WTAIL;
+                            ridx <= 0;          // entrar en WTAIL con ridx=0 -> se muestrea el token
+                        end else if (ridx > 13000000) begin
+                            sddat_stat <= WTIMEOUT;
+                            ridx <= ridx + 1;
+                        end else begin
+                            ridx <= ridx + 1;   // esperando el start-bit
                         end
-                        if(ridx > 13000000)      
-                             sddat_stat <= WTIMEOUT;
                     end
 
                     if(ridx[2:0] == 3'd7) begin
                         outen  <= 1'b1;         // bring next byte from sram
-                        //outaddr<= ridx[11:3];   
+                        //outaddr<= ridx[11:3];
                         outaddr <= outaddr + 9'd1;
                     end
-                    ridx   <= ridx + 1;
                 end
                 WTAIL   : begin                 // busy wait
                     if (ridx < 3) begin
                         crc_stat <= { crc_stat[1:0], sddat0 };
+                        ridx   <= ridx + 1;
                     end else begin
-        
-                        if (ridx == 4)
-                            crc_error <= crc_stat != 3'b010;
-
-                        if (!sddat0) begin      // wait for ack
-                            sddat_stat = WBUSY;
+                        crc_error <= crc_stat != 3'b010;
+                        if (crc_stat == 3'b010) begin           // aceptado: esperar busy
+                            if (!sddat0) begin
+                                sddat_stat <= WBUSY;
+                                ridx <= 0;
+                            end else if (ridx > 13000000) begin // timeout SIEMPRE comprobado
+                                sddat_stat <= WTIMEOUT;
+                            end else
+                                ridx   <= ridx + 1;
+                        end else begin                          // rechazado (101/110): NO re-enviar datos.
+                            // Re-enviar el bloque tras un CMD24 single-block es protocolo incorrecto:
+                            // la fase de datos ya termino, la tarjeta ignora el re-envio y nunca manda
+                            // la respuesta CRC -> WDURING se queda esperando ~4.5s. Lo correcto es
+                            // recuperar limpio (crc_error queda a 1) y dejar que el DRIVER reintente
+                            // el comando completo (re-emitir CMD24).
+                            sddat_stat <= WDONE;
                             ridx <= 0;
-                        if(ridx > 13000000)      
-                             sddat_stat <= WTIMEOUT;
                         end
                     end
-                    ridx   <= ridx + 1;
                 end
                 WBUSY   :  begin
-                    if (sddat0) begin      // wait for ack
-                        sddat_stat = WDONE;
+                    if (sddat0) begin      // wait for ack (tarjeta termino de programar)
+                        sddat_stat <= WDONE;
                         ridx <= 0;
+                    end else if (ridx > 13000000) begin
+                        sddat_stat <= WTIMEOUT;
+                        ridx   <= ridx + 1;
+                    end else begin
+                        ridx   <= ridx + 1;
                     end
-                    if(ridx > 13000000)      
-                         sddat_stat <= WTIMEOUT;
-                    ridx   <= ridx + 1;
                 end
                 WTIMEOUT : timeout_error <= 1;
 

@@ -12,5 +12,5 @@ echo 0-2 (4000h)   16kB  ESP8266 .ROM
 echo 0-3 (4000h)   16kB  FREE16KB.ROM
 echo                6b   CONFIG  .ROM
 echo -----------------------------------------------------------------------------
-copy /b a1xxjis1.rom + a1xxjis2.rom + Nextor-2.1.1.WonderTANG.ROM.bin + 32k_msx2p_int_fix.bin + 16k_msx2p_subrom.bin + 16k_msx2p_fm_logo_menu.bin + knmsxppl.rom + esp8266e.rom + 16k_ff.bin + 6b_config.bin goauld_rom_int.bin
-copy /b a1xxjis1.rom + a1xxjis2.rom + Nextor-2.1.1.WonderTANG.ROM.bin + a1wsxyen.rom + 2pextrtc.rom + 16k_msx2p_fm_logo_menu.bin + knmsxppl.rom + esp8266e.rom + 16k_ff.bin + 6b_config.bin goauld_rom_japan.bin
+copy /b a1xxjis1.rom + a1xxjis2.rom + Nextor-2.1.4.WonderTANG.ROM + 32k_msx2p_int_fix.bin + 16k_msx2p_subrom.bin + 16k_msx2p_fm_logo_menu.bin + knmsxppl.rom + esp8266e.rom + 16k_ff.bin + 6b_config.bin goauld_rom_int.bin
+copy /b a1xxjis1.rom + a1xxjis2.rom + Nextor-2.1.4.WonderTANG.ROM + a1wsxyen.rom + 2pextrtc.rom + 16k_msx2p_fm_logo_menu.bin + knmsxppl.rom + esp8266e.rom + 16k_ff.bin + 6b_config.bin goauld_rom_japan.bin

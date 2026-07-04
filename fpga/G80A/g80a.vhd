@@ -117,6 +117,8 @@ architecture rtl of G80a is
     signal RFSH_n_i     : std_logic;
     signal BUSAK_n_i    : std_logic;
     signal A_i          : std_logic_vector(15 downto 0);
+    signal A_prev       : std_logic_vector(15 downto 0);    -- direccion del ciclo anterior (deteccion de cambio real)
+    signal update_addr_i: std_logic;                        -- update_addr crudo del core T80
     --signal DO           : std_logic_vector(7 downto 0);
     signal DI_Reg       : std_logic_vector (7 downto 0);    -- Input synchroniser
     signal Wait_s       : std_logic;
@@ -141,6 +143,40 @@ begin
     A <= A_i when BUSAK_n_i = '1' else (others => 'Z');
     --D <= DO when Write = '1' and BUSAK_n_i = '1' else (others => 'Z');
     Data_Reverse <= Write;
+
+    -- update_addr solo cuando la direccion realmente cambia de valor.
+    -- Es un subconjunto del pulso crudo del core: solo puede suprimir pulsos
+    -- espurios (recargas de A con el mismo valor), nunca crear nuevos.
+    -- REGISTRADO en clk_54m: (a) mantiene el comparador de 16 bits en una ruta
+    -- 54->54 (periodo completo) en vez de meterlo en la ruta cross-domain hacia
+    -- state_demux (clk_108m), (b) restaura la naturaleza registrada del update_addr
+    -- original. La latencia de 1 ciclo de 54 MHz es inocua: es un nivel ancho
+    -- (~15 ciclos) y la direccion ya esta estable en el bus.
+    process (Reset_s, CLK_n)
+    begin
+        if Reset_s = '0' then
+            update_addr <= '0';
+        elsif CLK_n'event and CLK_n = '1' then
+            if A_i /= A_prev then
+                update_addr <= update_addr_i;
+            else
+                update_addr <= '0';
+            end if;
+        end if;
+    end process;
+
+    -- Snapshot de A_i con la misma cadencia que el core (flanco subida + clk_enable).
+    -- Tras el flanco: A_i = direccion nueva, A_prev = la anterior.
+    process (Reset_s, CLK_n)
+    begin
+        if Reset_s = '0' then
+            A_prev <= (others => '1');   -- distinto del A de reset (0): no pierde el primer cambio
+        elsif CLK_n'event and CLK_n = '1' then
+            if clk_enable = '1' then
+                A_prev <= A_i;
+            end if;
+        end if;
+    end process;
 
     process (RESET_n, CLK_n)
     begin
@@ -173,7 +209,7 @@ begin
             BUSAK_n => BUSAK_n_i,
             CLK_n => CLK_n,
             A => A_i,
-			update_addr => update_addr,
+			update_addr => update_addr_i,
             DInst => DI,
             DI => DI_Reg,
             DO => DO,
@@ -184,8 +220,8 @@ begin
     process (CLK_n)
     begin
         if CLK_n'event and CLK_n = '0' then
+            Wait_s <= WAIT_n;
 			if clk_falling = '1' then
-				Wait_s <= WAIT_n;
 				if TState = "011" and BUSAK_n_i = '1' then
 					DI_Reg <= to_x01(DI);
 				end if;
