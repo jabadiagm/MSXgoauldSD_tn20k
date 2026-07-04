@@ -37,7 +37,7 @@ Megaram is detected automatically by sofarun using default settings. When using 
 ## Configuration
 Config menu is showed pressing g during MSX logo. New improved menu is created by [nataliapc](https://github.com/nataliapc/msx_goauld_settings_menu)
 
-![Config](/pics/config5.png)
+![Config](/pics/config6.png)
 
 * Enable Mapper: On by default. Disable when having compatibility issues or to use a different mapper
 * Enable Megaram: On by default. Disable when having compatibility issues or to use a different megaram
@@ -46,7 +46,8 @@ Config menu is showed pressing g during MSX logo. New improved menu is created b
 * Megaram Slot: 3 by default. Change to 1 or 2 to get megaram in a not expanded slot. Physical slot will be disabled
 * Ghost SCC: Off by default. Enable to get sound from an SCC cartridge located in physical slot 1 or 2
 * Enable Scanlines: On by default. Disable to get a clean hdmi picture
-* Compatible Mode: On by default. Enable for use with external cartridges, disable for internal SD use
+* Compatible Mode: On by default. Enable for use with external cartridges
+* Turbo: Off by default. Enable to use an internal high-speed clock. Recommended for internal SD use only
 * Save & Exit: store new config and continue, changes in mapper settings will be effective after pressing reset
 * Save & Reset: store new config and make software reset, changes will be immediate
 
