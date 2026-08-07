@@ -35,7 +35,7 @@ set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {cpu1/u0/Regs/R
     create_clock -name clock_env_reset -period 277.778 -waveform {0 138.889} [get_nets {psg1/env_reset}] -add
     set_false_path -from [get_clocks {clock_27m}] -to [get_pins {psg1/?*?/?*}]
     set_false_path -from [get_clocks {clock_54m}] -to [get_pins {psg1/?*?/?*}]
-    set_false_path -from [get_clocks {clock_54m}] -to [get_pins {opll/?*?/?*?/CE}]
+    //set_false_path -from [get_clocks {clock_54m}] -to [get_pins {opll/?*?/?*?/CE}]
 
 set_false_path -from [get_clocks {clock_108m}] -to [get_pins {rtc1/?*?/?*}]
 set_false_path -from [get_clocks {clock_54m}] -to [get_pins {rtc1/?*?/?*}]
@@ -45,9 +45,6 @@ set_false_path -from [get_clocks {clock_54m}] -to [get_pins {ocm_ports/?*?/D}]
 set_false_path -from [get_clocks {clock_54m}] -to [get_pins {debug1/?*?/?*?/D}]
 set_false_path -from [get_clocks {clock_54m}] -to [get_pins {debug1/?*?/?*?/CE}]
 set_false_path -from [get_clocks {clock_27m}] -to [get_pins {vdp4/hdmi_ntsc/true_hdmi_output.packet_picker/audio_sample_word_transfer?*?/D}]
-//set_false_path -from [get_clocks {clock_108m}] -to [get_pins {vdp4/u_v9958/U_SPRITE/SPRENDERPLANES*/CE}]
-//set_false_path -from [get_clocks {clock_108m}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_LISTUP_ADDR_*/D}]
-//set_false_path -from [get_clocks {clock_108m}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_LISTUP_ADDR_*/CE}]
 
 
 
@@ -66,34 +63,6 @@ set_max_delay -from [get_pins {cpu1/?*/Q}] -to [get_pins {cpu_din_*/D}] 18.1
 set_max_delay -from [get_pins {cpu1/?*/Q}] -to [get_pins {wait_cycles_*/D}]  18.2
 set_max_delay -from [get_pins {cpu1/?*/Q}] -to [get_pins {wait_cycles_*/CE}] 18.2
 
-// Tras pasar los estrobos a flanco de subida, esta ruta es R->R a periodo completo:
-// cpu1/u0/.../DO[*] (p.ej. IStatus) -> mux profundo de cpu_din. Data delay ~18.62 ns,
-// justo por encima de 18.518 -> -0.133 ns. Un periodo no relaja (seria mas estricto);
-// se acota a 1.5 periodos. Valido porque la CPU muestrea DI varios T-states despues
-// (cpu_din registrado -> DI_Reg -> consumo en T3): ventana funcional de varios ciclos.
-// Anclado en el endpoint (cpu_din_*/D, que matchea con seguridad) y -from por reloj:
-// el patron de pin del origen (DO[8], bit de bus) no matcheaba con get_pins.
-//set_max_delay -from [get_clocks {clock_54m}] -to [get_pins {cpu_din_*/D}] 27.7
-//set_max_delay -from [get_pins {cpu1/u0/?*/DO[8]}] -to [get_pins {cpu_din_*/D}] 27.7
-
-//set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {xffl_s0/D}] 9.6
-//set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {cpu_din_*/D}] 30.0
-//set_max_delay -from [get_clocks {clock_54m}] -to [get_pins {cpu_din_*/D}] 18.2
-//set_max_delay -from [get_clocks {clock_54m}] -to [get_pins {mem1/sdram_seq*/D}] 10.5
-//set_max_delay -from [get_clocks {clock_54m}] -to [get_pins {mem1/sdram_seq*/CE}] 10.5
-//set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {SdrAdr_*/D}] 16.5
-//set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {SdrBa_*/D}] 20.0
-//set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {SdrUdq_*/D}] 20.0
-//set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {SdrLdq_*/D}] 20.0
-//set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {RamDbi_*/D}] 16.5
-//set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {VrmDbi2_*/D}] 16.5
-//set_max_delay -from [get_clocks {clock_27m}] -to [get_pins {VrmDbi2_*/Q}] 16.5
-//set_max_delay -from [get_pins {mem1/vram_dout_*/Q}] -to [get_clocks {clock_27m}] 10.5
-//set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {memory_ctrl/enable_read_seq*/D}] 11.0
-//set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {memory_ctrl/enable_write_seq*/D}] 11.0
-//set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {memory_ctrl/vram/u_sdram/FF_SDRAM_A*/D}] 12.0
-//set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {memory_ctrl/vram/u_sdram/FF_SDRAM_BA*/D}] 12.0
-//set_max_delay -from [get_clocks {clock_108m}] -to [get_pins {memory_ctrl/vram/u_sdram/FF_SDRAM_DQM*/D}] 12.0
 
 //set_false_path -from [get_clocks {clock_108m}] -to [get_pins {debug/?*?/CE}]
 //set_false_path -from [get_clocks {clock_27m}] -to [get_pins {debug/?*?/CE}]
@@ -112,40 +81,64 @@ set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {ff_sd_sector_*
 set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {ff_sd_cd_*/CE}] -setup -end 2
 set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {ff_sd_cd_*/CE}] -hold -end 1
 
-// cpu1 -> mem1 SDRAM: direcciones y secuenciador
-// El Z80 corre a 3.6 MHz efectivos (~15 ciclos de 54 MHz por ciclo Z80),
-// por lo que estas señales son estables multiples ciclos antes de que la SDRAM las use.
-// Grupo A (5 paths): cpu1/RD_s0 -> sdram_addr/sdram_seq  (cruce F->R, ventana 9.259 ns insuficiente)
-// Grupo B (13 paths): cpu1/u0/IStatus_0_s15 -> sdram_addr (R->R, retardo combinacional ~19 ns > 18.518 ns)
-//set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {mem1/sdram_addr_*/D}] -setup -end 2
-//set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {mem1/sdram_addr_*/D}] -hold -end 1
-//set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {mem1/sdram_seq_*/CE}] -setup -end 2
-//set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {mem1/sdram_seq_*/CE}] -hold -end 2
-// CE del registro de direccion SDRAM: faltaba (solo estaba /D). Misma clase y mismo
-// criterio que /D arriba: IORQ_n/WR_n (estrobos, estables ~15 ciclos) -> sdram_addr/CE,
-// cruce F->R de medio periodo pesimista. Destino estrecho (solo la direccion, no datos).
-//set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {mem1/sdram_addr_*/CE}] -setup -end 2
-//set_multicycle_path -from [get_clocks {clock_54m}] -to [get_pins {mem1/sdram_addr_*/CE}] -hold -end 2
+// vram_dout (108M) -> consumidores del VDP a 27MHz. GEOMETRIA REAL: el dato se commitea
+// en vram_dout en t+6/t+7 (doble latch, mismo valor) y la captura mas temprana es t+8 ->
+// presupuesto real desde el PRIMER commit = 18.5 ns. El multicycle -end 2 usado antes era
+// INSOUND (relajaba a ~46 ns; con el P&R holgado produjo sprites fantasma deterministas,
+// y ~= valor del pixel, confirmado en HW 2026-07). max_delay 18.0 es la cota honesta,
+// valida para TODO consumidor a 27M de vram_dout (sprites, Y-test, OVERMAP...).
+set_max_delay -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/?*?/D}] 18.0
+set_max_delay -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/?*?/CE}] 18.0
+// F3 command cache: FF_CC_VRDATA32 captura la palabra (vram_dout_32) con la MISMA
+// geometria (commit t+6/t+7, captura t+8) -> misma cota honesta.
+//`ifdef ENABLE_V9968
+//set_max_delay -from [get_pins {mem1/vram_dout_32_*/Q}] -to [get_pins {vdp4/u_v9958/FF_CC_VRDATA32_*/D}] 18.0
+//set_max_delay -from [get_pins {mem1/vram_dout_32_*/Q}] -to [get_pins {vdp4/u_v9958/FF_CC_VRDATA32_*/CE}] 18.0
+// F2 sprite m3: el Y-test/fetch consumen la palabra (PRAMDBI32) en capturas t+8 -> misma cota.
+//set_max_delay -from [get_pins {mem1/vram_dout_32_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE_M3/?*?/D}] 18.0
+//set_max_delay -from [get_pins {mem1/vram_dout_32_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE_M3/?*?/CE}] 18.0
 
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/SPRENDERPLANES*/CE}] -setup -end 2
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/SPRENDERPLANES*/CE}] -hold -end 1
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_SP_OVERMAP_NUM*/CE}] -setup -end 2
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_SP_OVERMAP_NUM*/CE}] -hold -end 1
+// ==================== MOLIENDA FORZADA (anti-loteria) ============================
+// Invariante validado (6/6 builds): arranca <=> el report tiene slacks NEGATIVOS en las
+// familias benignas (= el router no logro cerrar y siguio optimizando globalmente).
+// Cuando el sorteo del P&R cierra todo ("timing met"), el router PARA PRONTO y alguna
+// ruta STA-ciega (sospecha: skew de liberacion del grupo asincrono de reset -> corrompe
+// la copia flash->SDRAM de la BIOS) queda larga -> pantalla negra.
+// Esta cota hace INALCANZABLE una familia funcionalmente tolerante a cualquier retardo:
+// sdram_addr es nivel-estable ~15 ciclos de CPU y se auto-corrige (probado: build buena
+// arrancando con -0.762 aqui). Llegadas tipicas 16.4-19.5 ns -> con 16.5 siempre quedan
+// rutas en negativo -> el router muele en TODAS las builds = regimen bueno por diseno.
+// (Si un dia molesta, subir a 17.5 antes que quitarla.)
+set_max_delay -to [get_pins {mem1/sdram_addr_*/D}] 16.6
 
-// Y-test cluster fed by mem1/vram_dout (108MHz->27MHz). Same multicycle intent as
-// SPRENDERPLANES/FF_SP_OVERMAP_NUM above: these registers only capture at
-// DOTSTATE="01" & EIGHTDOTSTATE="110", never on consecutive clock_27m edges, and
-// vram_dout is stable for the whole VDP read window. Left uncovered originally, they
-// were the worst-slack paths in the design (0.128 ns) -> intermittent sprite glitches.
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_LISTUP_ADDR*/D}] -setup -end 2
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_LISTUP_ADDR*/D}] -hold -end 1
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_LISTUP_ADDR*/CE}] -setup -end 2
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_LISTUP_ADDR*/CE}] -hold -end 1
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_EN*/D}] -setup -end 2
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_EN*/D}] -hold -end 1
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_EN*/CE}] -setup -end 2
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_Y_TEST_EN*/CE}] -hold -end 1
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_SP_OVERMAP*/CE}] -setup -end 2
-set_multicycle_path -from [get_pins {mem1/vram_dout_*/Q}] -to [get_pins {vdp4/u_v9958/U_SPRITE/FF_SP_OVERMAP*/CE}] -hold -end 1
+// ============================ SONDAS DE DIAGNOSTICO =============================
+// Solo INFORMAN (no restringen): vuelcan el retardo real (columna arrival) de las
+// familias que las constraints relajan (multicycle/max_delay) y que por eso nunca
+// aparecen en el top-400 general. Objetivo: comparar una build BUENA contra una MALA
+// (pantalla negra) y ver que familia se dispara — esa es la constraint mentirosa.
+// Foco pantalla-negra: nucleo Z80 (multicycle blanket -end 2), captura cpu_din,
+// camino CPU->SDRAM (copia de BIOS + accesos), y SD como control.
+report_timing -setup -to [get_pins {cpu_din_*/D}] -max_paths 12
+report_timing -setup -to [get_pins {wait_cycles_*/D}] -max_paths 8
+report_timing -setup -to [get_pins {mem1/sdram_addr_*/D}] -max_paths 16
+report_timing -setup -to [get_pins {mem1/sdram_seq_*/CE}] -max_paths 8
+report_timing -setup -from [get_clocks {clock_54m}] -to [get_pins {cpu1/?*?/D}] -max_paths 24
+report_timing -hold  -to [get_pins {cpu1/?*?/D}] -max_paths 12
+report_timing -setup -to [get_pins {ff_sd_cd_*/D}] -max_paths 8
+// CE del nucleo Z80: el multicycle blanket los relaja a 2 ciclos (37 ns) pero la red de
+// clock-enables conmuta a ritmo de 54 MHz -> requisito real 18.5 ns. Sospechoso #1 de
+// pantalla negra en builds "todo positivo" (el router para pronto y los deja largos).
+report_timing -setup -to [get_pins {cpu1/?*?/CE}] -max_paths 24
+report_timing -hold  -to [get_pins {cpu1/?*?/CE}] -max_paths 12
+report_timing -setup -to [get_pins {cpu1/u0/Regs/?*?/?*}] -max_paths 12
+// false-pathed (puede que no vuelquen nada, inofensivo): config de maquina y RTC
+report_timing -setup -to [get_pins {ocm_ports/?*?/D}] -max_paths 8
+report_timing -setup -to [get_pins {rtc1/?*?/D}] -max_paths 8
+// Banco de registros del Z80 (RAM distribuida): las sondas /D y /CE no ven sus pines
+// WRE/AD. El write va gateado por CEN (t80_reg.vhd:92) -> la red del enable y el WRE
+// tienen requisito REAL de 1 ciclo (18.5) pero el blanket cpu1/u0/?*?/?* los relaja a 37.
+report_timing -setup -to [get_pins {cpu1/u0/Regs/?*?/WRE}] -max_paths 12
+report_timing -setup -to [get_pins {cpu1/u0/Regs/?*?/AD?*}] -max_paths 12
+// =================================================================================
 
 report_timing -setup -max_paths 400 -max_common_paths 1

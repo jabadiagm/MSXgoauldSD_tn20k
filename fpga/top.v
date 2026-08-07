@@ -1,4 +1,5 @@
 `define ENABLE_V9958
+//`define ENABLE_V9968 //here for cosmetic reasons, real `define ENABLE_V9968 located in vdp_config.vh
 `define ENABLE_BIOS
 `define ENABLE_SOUND //v9958, bios required
 `define ENABLE_MAPPER //bios required
@@ -9,6 +10,7 @@
 //`define ENABLE_WAIT_ADAPTIVE //wait required
 //`define SWAP23
 `define ENABLE_WIFI
+//`define ENABLE_CUSTOM_ROM //16kb slot 0-3, bank 1
 
 module top
 #(
@@ -117,20 +119,16 @@ end
     );
 
     wire bus_clk_3m6;
-    reg bus_clk_3m6_ff;
-    always @ (posedge clk_54m) begin
-        bus_clk_3m6_ff <= ex_bus_clk_3m6;
-    end
-    assign bus_clk_3m6 = bus_clk_3m6_ff;
-//    PINFILTER dn1(
-//        .clk(clk_54m),
-//        .reset_n(1),
-//        .din(ex_bus_clk_3m6),
-//        .dout(bus_clk_3m6)
-//    );
+    PINFILTER dn1(
+        .clk(clk_54m),
+        .reset_n(1),
+        .din(ex_bus_clk_3m6),
+        .dout(bus_clk_3m6)
+    );
+    reg bus_clk_3m6_27;
 //    CLOCK_DIV #(
 //        .CLK_SRC(54.0),
-//        .CLK_DIV(6.75),
+//        .CLK_DIV(15.0),
 //        .PRECISION_BITS(16)
 //    ) cpuclkd (
 //        .clk_src(clk_54m),
@@ -146,22 +144,21 @@ end
     reg bus_clk_3m6_27_5;
     reg bus_clk_3m6_27_6;
 
-//    always @ (posedge clk_27m) begin
-//        bus_clk_3m6_27_6 <= bus_clk_3m6;
-//        bus_clk_3m6_27_5 <= bus_clk_3m6_27_6;
-//        bus_clk_3m6_27_4 <= bus_clk_3m6_27_5;
-//        bus_clk_3m6_27_3 <= bus_clk_3m6_27_4;
-//        bus_clk_3m6_27_2 <= bus_clk_3m6_27_3;
-//        bus_clk_3m6_27_1 <= bus_clk_3m6_27_2;
-//        bus_clk_3m6_27_0 <= bus_clk_3m6_27_1;
-//        bus_clk_3m6_27 <= bus_clk_3m6_27_0;
-//    end
+    always @ (posedge clk_27m) begin
+        bus_clk_3m6_27_6 <= bus_clk_3m6;
+        bus_clk_3m6_27_5 <= bus_clk_3m6_27_6;
+        bus_clk_3m6_27_4 <= bus_clk_3m6_27_5;
+        bus_clk_3m6_27_3 <= bus_clk_3m6_27_4;
+        bus_clk_3m6_27_2 <= bus_clk_3m6_27_3;
+        bus_clk_3m6_27_1 <= bus_clk_3m6_27_2;
+        bus_clk_3m6_27_0 <= bus_clk_3m6_27_1;
+        bus_clk_3m6_27 <= bus_clk_3m6_27_0;
+    end
 
     wire clk_enable_3m6_27;
     wire clk_falling_3m6_27;
     reg bus_clk_3m6_prev_27;
     always @ (posedge clk_27m) begin
-        bus_clk_3m6_27 <= bus_clk_3m6;
         bus_clk_3m6_prev_27 <= bus_clk_3m6_27;
     end
     assign clk_enable_3m6_27 = (bus_clk_3m6_prev_27 == 0 && bus_clk_3m6_27 == 1);
@@ -224,16 +221,13 @@ end
     assign clk_falling_6m75_54 = (bus_clk_6m75_54 == 1 && clk_6m75_54 == 0);
 
 
-    reg bus_wait_n;
-//    PINFILTER dn2(
-//        .clk(clk_54m),
-//        .reset_n(1),
-//        .din(ex_bus_wait_n),
-//        .dout(bus_wait_n)
-//    );
-    always @ (posedge clk_54m) begin
-        bus_wait_n <= ex_bus_wait_n;
-    end
+    wire bus_wait_n;
+    PINFILTER dn2(
+        .clk(clk_54m),
+        .reset_n(1),
+        .din(ex_bus_wait_n),
+        .dout(bus_wait_n)
+    );
 
     wire bus_reset_n;
     PINFILTER dn3(
@@ -243,24 +237,21 @@ end
         .dout(bus_reset_n)
     );
 
-    reg bus_int_n;
+    wire bus_int_n;
 //    PINFILTER dn4(
 //        .clk(clk_108m),
 //        .reset_n(1),
 //        .din(ex_bus_int_n),
 //        .dout(bus_int_n)
 //    );
-//    denoise dn4 (
-//		.data_in (ex_bus_int_n),
-//		.clock(clk_54m),
-//		.data_out (bus_int_n)
-//    );
-    always @ (posedge clk_54m) begin
-        bus_int_n <= ex_bus_int_n;
-    end
+    denoise dn4 (
+		.data_in (ex_bus_int_n),
+		.clock(clk_54m),
+		.data_out (bus_int_n)
+    );
 
     reg [7:0] bus_data;
-    /*genvar i;
+    genvar i;
     generate
         for (i = 0; i <= 7; i++)
         begin: bus_din
@@ -276,11 +267,11 @@ end
 //                .data_out (bus_data[i])
 //            );
         end
-    endgenerate */
+    endgenerate
 
-    always @ (posedge clk_54m) begin
-        bus_data <= ex_bus_data;
-    end
+//    always @ (posedge clk_108m) begin
+//        bus_data <= ex_bus_data;
+//    end
 
     //startup logic
     reg reset1_n_ff;
@@ -530,6 +521,8 @@ end
 
     //bus isolation
     wire bus_data_reverse;
+    wire bus_data_reverse_dly;
+    reg bus_data_reverse_prev;
     wire bus_m1_n;
     wire bus_mreq_n;
     wire bus_iorq_n;
@@ -540,15 +533,15 @@ end
     wire [7:0] cpu_dout;
     wire bus_mreq_disable;
     wire bus_iorq_disable;
-    //wire bus_disable;
     assign ex_bus_m1_n = bus_m1_n;
     assign ex_bus_rfsh_n = bus_rfsh_n;
-    assign ex_bus_data_reverse_n = ~ bus_data_reverse;
-    //assign ex_bus_data_reverse = bus_data_reverse;
-    //assign ex_bus_mreq_n = bus_mreq_n;
-    //assign ex_bus_iorq_n = bus_iorq_n;
-    //assign ex_bus_rd_n = bus_rd_n;
-    //assign ex_bus_wr_n = bus_wr_n;
+
+    always @ (posedge clk_54m) begin
+        bus_data_reverse_prev <= bus_data_reverse;
+    end
+    assign bus_data_reverse_dly = bus_data_reverse | bus_data_reverse_prev;
+
+    assign ex_bus_data_reverse_n = ~ bus_data_reverse_dly;
 
     assign bus_mreq_disable = 0;
     assign bus_iorq_disable = (
@@ -558,11 +551,8 @@ end
                         `endif 
                                 ) ? 1 : 0;
 
-    //assign bus_disable = bus_mreq_disable | bus_iorq_disable;
-//    assign ex_bus_data = ( bus_data_reverse == 1 && slot0_req_w == 0 ) ? cpu_dout : 
-//                         ( slot0_req_w == 1 ) ? 8'hff :  8'hzz;
 `ifndef SWAP23
-    assign ex_bus_data =  ( bus_data_reverse == 1 ) ? cpu_dout : 8'hzz;
+    assign ex_bus_data =  ( bus_data_reverse_dly == 1 ) ? cpu_dout : 8'hzz;
 `else
 
     function [1:0] swap;
@@ -588,20 +578,20 @@ end
         end
         else begin
             if (ppi_swap == 0) begin
-                if (bus_data_reverse == 1  && ppi_req_w == 1) begin
+                if (bus_data_reverse_dly == 1  && ppi_req_w == 1) begin
                     ppi_swap <= 1;
                 end
             end
             else begin
-                if (bus_data_reverse == 0) begin
+                if (bus_data_reverse_dly == 0) begin
                     ppi_swap <= 0;
                 end
             end
         end
     end
 
-    assign ex_bus_data =  ( bus_data_reverse == 1  && ppi_swap == 0) ? cpu_dout : 
-                          ( bus_data_reverse == 1  && ppi_swap == 1) ? cpu_dout_swap : 8'hzz;
+    assign ex_bus_data =  ( bus_data_reverse_dly == 1  && ppi_swap == 0) ? cpu_dout : 
+                          ( bus_data_reverse_dly == 1  && ppi_swap == 1) ? cpu_dout_swap : 8'hzz;
 `endif
 
     always @ (posedge clk_54m) begin
@@ -641,6 +631,9 @@ end
                      ( wifi_req == 1 ) ? ram_dout :
                      ( f2_req_r == 1 ) ? f2_port :
                      ( uart_req == 1 ) ? uart_dout :
+                `endif
+                `ifdef ENABLE_CUSTOM_ROM
+                     ( custom_rom_req == 1 ) ? ram_dout :
                 `endif
                      ( rtc_req_r == 1 ) ? rtc_dout :
                      ( ppi_req_r == 1 ) ? ppi_port_a :
@@ -755,6 +748,10 @@ end
                      ( f2_req == 1 ) |
                      ( uart_req == 1 ) |
                 `endif
+                `ifdef ENABLE_CUSTOM_ROM
+                     ( custom_rom_req == 1 ) |
+                `endif
+                     ( ppi_req_r == 1 ) |
                      ( rtc_req == 1 );
 
   `ifndef ENABLE_WAIT_ADAPTIVE
@@ -766,23 +763,8 @@ end
         else begin
             case (state_wait)
                 WAIT_IDLE: begin
-                    if ( config_enable_wait == 1 && ( bus_iorq_n == 0 || bus_mreq_n == 0 ) && (bus_rd_n == 0 || bus_wr_n == 0) ) begin
-                        if (config_enable_turbo == 0) begin 
-                            if (bus_rd_n == 0) begin
-                                wait_cycles <= 7'd1;
-                            end
-                            else begin
-                                wait_cycles <= 7'd4;
-                            end
-                        end
-                        else begin 
-                            if (bus_rd_n == 0) begin
-                                wait_cycles <= 7'd2;
-                            end
-                            else begin
-                                wait_cycles <= 7'd6;
-                            end
-                        end
+                    if ( (config_enable_turbo == 1 || config_enable_wait == 1) && ( bus_iorq_n == 0 || bus_mreq_n == 0 ) && (bus_rd_n == 0 || bus_wr_n == 0) ) begin
+                        wait_cycles <= 7'd1;
                         wait_io_ff <= 0;
                         state_wait <= WAIT_STATE1;
                     end
@@ -817,54 +799,54 @@ end
         end
     end
 
-    reg [6:0] state_wait_addr;
-    reg wait_addr_ff;
-    reg [6:0] wait_cycles_addr;
-    wire wait_addr;
-    assign wait_addr = wait_addr_ff;
-    always @ (posedge clk_54m) begin
-        if (~bus_reset_n) begin
-            state_wait_addr <= WAIT_IDLE;
-            wait_addr_ff <= 1;
-        end 
-        else begin
-            case (state_wait_addr)
-                WAIT_IDLE: begin
-                    if ( config_enable_turbo == 1 && config_enable_wait == 1 && update_addr == 1 ) begin
-                        wait_cycles_addr <= 2;
-                        wait_addr_ff <= 0;
-                        state_wait_addr <= WAIT_STATE1;
-                    end
-                end
-                WAIT_STATE1: begin
-                    if (bus_rfsh_n == 0) begin
-                        wait_addr_ff <= 1;
-                        state_wait_addr <= WAIT_STATE3;
-                    end
-                    else if ( main_clk_falling == 1 ) begin
-                        wait_cycles_addr <= wait_cycles_addr - 1;
-                        state_wait_addr <= WAIT_STATE2;
-                    end
-                end
-                WAIT_STATE2: begin
-                    if ( main_clk_enable == 1 ) begin
-                        if ( wait_cycles_addr == 0 ) begin
-                            wait_addr_ff <= 1;
-                            state_wait_addr <= WAIT_STATE3;
-                        end
-                        else begin
-                            state_wait_addr <= WAIT_STATE1;
-                        end
-                    end
-                end
-                WAIT_STATE3: begin
-                    if ( update_addr == 0) begin
-                        state_wait_addr <= WAIT_IDLE;
-                    end
-                end
-            endcase
-        end
-    end
+//    reg [6:0] state_wait_addr;
+//    reg wait_addr_ff;
+//    reg [6:0] wait_cycles_addr;
+//    wire wait_addr;
+//    assign wait_addr = wait_addr_ff;
+//    always @ (posedge clk_54m) begin
+//        if (~bus_reset_n) begin
+//            state_wait_addr <= WAIT_IDLE;
+//            wait_addr_ff <= 1;
+//        end 
+//        else begin
+//            case (state_wait_addr)
+//                WAIT_IDLE: begin
+//                    if ( config_enable_turbo == 1 && config_enable_wait == 1 && update_addr == 1 ) begin
+//                        wait_cycles_addr <= 2;
+//                        wait_addr_ff <= 0;
+//                        state_wait_addr <= WAIT_STATE1;
+//                    end
+//                end
+//                WAIT_STATE1: begin
+//                    if (bus_rfsh_n == 0) begin
+//                        wait_addr_ff <= 1;
+//                        state_wait_addr <= WAIT_STATE3;
+//                    end
+//                    else if ( main_clk_falling == 1 ) begin
+//                        wait_cycles_addr <= wait_cycles_addr - 1;
+//                        state_wait_addr <= WAIT_STATE2;
+//                    end
+//                end
+//                WAIT_STATE2: begin
+//                    if ( main_clk_enable == 1 ) begin
+//                        if ( wait_cycles_addr == 0 ) begin
+//                            wait_addr_ff <= 1;
+//                            state_wait_addr <= WAIT_STATE3;
+//                        end
+//                        else begin
+//                            state_wait_addr <= WAIT_STATE1;
+//                        end
+//                    end
+//                end
+//                WAIT_STATE3: begin
+//                    if ( update_addr == 0) begin
+//                        state_wait_addr <= WAIT_IDLE;
+//                    end
+//                end
+//            endcase
+//        end
+//    end
 
   `else
     always @ (posedge clk_54m) begin
@@ -943,8 +925,8 @@ end
     assign main_clk_falling = (turbo_safe == 1) ? clk_falling_6m75_54 : clk_falling_3m6_54;
 
     `ifdef ENABLE_WAIT
-        assign cpu_clk_enable  = main_clk_enable & wait_io & wait_addr;
-        assign cpu_clk_falling = main_clk_falling & wait_io & wait_addr;
+        assign cpu_clk_enable  = main_clk_enable & wait_io;
+        assign cpu_clk_falling = main_clk_falling & wait_io;
     `else
         assign cpu_clk_enable  = main_clk_enable;
 		assign cpu_clk_falling = main_clk_falling;
@@ -1227,6 +1209,13 @@ end
 
 `endif 
 
+`ifdef ENABLE_CUSTOM_ROM
+    reg custom_rom_req;
+    always @ (posedge clk_54m) begin
+        custom_rom_req <= ( bus_mreq_n == 0 && bus_rd_n == 0 && page_num[1] == 1 && pri_slot_num[0] == 1 && exp_slot0_num[3] == 1 ) ? 1 : 0;
+    end
+`endif
+
     //rtc
     wire rtc_req_r;
     wire rtc_req_w;
@@ -1255,24 +1244,24 @@ end
     wire [7:0] vdp_dout;
     wire vdp_int;
     wire WeVdp_n;
-    wire [16:0] VdpAdr;
+    wire [17:0] VdpAdr;   // 18 bits (VRAM 256K)
     //wire [15:0] VrmDbi;
     wire [7:0] VrmDbo;
     wire VideoDHClk;
     wire VideoDLClk;
-    assign vdp_csw_n = (bus_addr[7:2] == 6'b100110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 0:1; // I/O:98-9Bh   / VDP (V9938/V9958)
-    assign vdp_csr_n = (bus_addr[7:2] == 6'b100110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 0:1; // I/O:98-9Bh   / VDP (V9938/V9958)
+    assign vdp_csw_n = ( (bus_addr[7:3] == 5'b10011 ) && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 0:1; // I/O:98-9Fh   / VDP (V9938/V9958/V9968: 9Ch = int flags)
+    assign vdp_csr_n = ( (bus_addr[7:3] == 5'b10011 ) && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 0:1; // I/O:98-9Fh   / VDP (V9938/V9958/V9968: 9Ch = int flags)
     assign vdp_req = ~(vdp_csw_n & vdp_csr_n);
 
 `ifdef ENABLE_V9958
-    v9958_top vdp4 (
+    vdp_top vdp4 (
         .clk (clk_27m),
         .s1 (0),
         .clk_50 (0),
         .clk_125 (0),
 
         .reset_n (bus_reset_n ),
-        .mode    (bus_addr[1:0]),
+        .mode    (bus_addr[2:0]),
         .csw_n   (vdp_csw_n),
         .csr_n   (vdp_csr_n),
 
@@ -1301,7 +1290,12 @@ end
         .WeVdp_n(WeVdp_n),
         .VdpAdr(VdpAdr),
         .VrmDbi(VrmDbi2),
+        .VrmDbi32(VrmDbi2_32),   // F1: palabra de 32 bits contigua (sprite/F2)
         .VrmDbo(VrmDbo),
+        .VrmDbo32(VrmDbo32),     // F3: palabra de escritura del command cache
+        .VrmWmask(VrmWmask),
+        .VrmWide(VrmWide),
+
 
         .VideoDHClk(VideoDHClk),
         .VideoDLClk(VideoDLClk),
@@ -1319,7 +1313,7 @@ end
     assign VideoDLClk = vdp_clk_div[1];
     // VDP outputs consumed by memory controller
     assign WeVdp_n = 1'b1;
-    assign VdpAdr  = 17'h0;
+    assign VdpAdr  = 18'h0;
     assign VrmDbo  = 8'h0;
     // VDP outputs consumed by other modules
     assign vdp_int  = 1'b1;
@@ -1389,7 +1383,11 @@ end
     assign mapper_addr = 22'd0;
 `endif
 
-    reg [15:0] VrmDbi2;
+    reg [15:0] VrmDbi2;    // F1 VRAM contigua: par {byte@X+1, byte@X} desde memory.vram_dout
+    wire [31:0] VrmDbi2_32; // F1 VRAM contigua: palabra de 32 bits desde memory.vram_dout_32 (sprite/F2)
+    wire [31:0] VrmDbo32;   // F3 command cache: palabra de escritura enmascarada
+    wire [3:0]  VrmWmask;
+    wire        VrmWide;
     reg [7:0] megaram_dout;
     wire [22:0] ram_addr;
     wire ram_read;
@@ -1401,7 +1399,7 @@ end
 
     //rom map, 512 KB, [18:0]
     //876 54321098 76543210
-    //111 11xxxxxx xxxxxxxx free, 16 KB, 0x7c000 - 0x7ffff
+    //111 11xxxxxx xxxxxxxx free/custom, 16 KB, 0x7c000 - 0x7ffff
     //111 10xxxxxx xxxxxxxx esp8266, 16 KB, 0x78000 - 0x7bfff
     //111 0xxxxxxx xxxxxxxx kanji, 32 KB, 0x70000 - 0x77fff
     //110 11xxxxxx xxxxxxxx fm + logo + boot menu, 16 KB, 0x6c000 - 0x6ffff
@@ -1414,6 +1412,7 @@ end
     //sdram map, 8 MB, [22:0]
     //2109876 54321098 76543210
     //11111xx xxxxxxxx xxxxxxxx vram, 256 KB, bank D
+    //1110111 11xxxxxx xxxxxxxx custom rom, 16 KB, 0x77c000 - 0x77ffff
     //1110111 10xxxxxx xxxxxxxx esp8266, 16 KB, 0x778000 - 0x77bfff
     //1110111 0xxxxxxx xxxxxxxx kanji driver, 32 KB, 0x770000 - 0x777fff
     //1110110 11xxxxxx xxxxxxxx fm + logo + boot menu, 16 KB, 0x76c000 - 0x76ffff
@@ -1439,6 +1438,9 @@ end
                 `ifdef ENABLE_WIFI
                         (wifi_req == 1 ) ? { 9'b111011110, bus_addr[13:0] } : //bank D
                 `endif
+                `ifdef ENABLE_CUSTOM_ROM
+                        (custom_rom_req == 1 ) ? { 9'b111011111, bus_addr[13:0] } : //bank D
+                `endif
                         23'h7fffff; 
     
     assign ram_read = (~flash_idle) ? 0 : 
@@ -1455,6 +1457,9 @@ end
                       (kanji_data_ram_req == 1) ? ~bus_rd_n :
                 `ifdef ENABLE_WIFI
                       (wifi_req == 1) ? ~bus_rd_n :
+                `endif
+                `ifdef ENABLE_CUSTOM_ROM
+                       (custom_rom_req == 1 ) ? ~bus_rd_n :
                 `endif
                       0;
     
@@ -1478,6 +1483,9 @@ end
                 `ifdef ENABLE_WIFI
                      (wifi_req == 1) ? wifi_req:
                 `endif
+                `ifdef ENABLE_CUSTOM_ROM
+                        (custom_rom_req == 1 ) ? custom_rom_req :
+                `endif
                       0;
 
     assign ram_din = (~flash_idle) ? { rom_dout, rom_dout }  : { cpu_dout, cpu_dout };
@@ -1495,11 +1503,17 @@ memory_ctrl mem1 (
     .ram_addr(ram_addr),
     .vram_din(VrmDbo),
     .vram_write(~WeVdp_n),
-    .vram_addr(VdpAdr),
+    .vram_addr(VdpAdr),   // 18 bits: bit17 (256K) activo, gateado por modo V9968 dentro del VDP
+    // F3 command cache: escritura de palabra enmascarada desde el VDP (solo accesos del
+    // cache de comandos, VrmWide=1; en modo V9958 el VDP mantiene VrmWide=0 = clasico).
+    .vram_din_32(VrmDbo32),
+    .vram_wmask(VrmWmask),
+    .vram_wide(VrmWide),
     .bus_rfsh_n(bus_rfsh_n),
 
     .ram_dout(ram_dout),
-    .vram_dout(VrmDbi2),
+    .vram_dout(VrmDbi2),          // F1: par {byte@X+1, byte@X} (16b) al VDP
+    .vram_dout_32(VrmDbi2_32),    // F1: palabra de 32b al VDP (sprite/F2)
     .ram_busy(ram_busy),
 
     .O_sdram_clk(O_sdram_clk),
@@ -1570,13 +1584,13 @@ memory_ctrl mem1 (
         .debug ()
     );
 
-    wire [7:0] psgSound3;
-    psg_filter filter1 (
-        .clk_27m (clk_27m),
-        .reset (~bus_reset_n),
-        .data_in (psgSound1),
-        .data_out (psgSound3)
-    );
+//    wire [7:0] psgSound3;
+//    psg_filter filter1 (
+//        .clk_27m (clk_27m),
+//        .reset (~bus_reset_n),
+//        .data_in (psgSound1),
+//        .data_out (psgSound3)
+//    );
 
     //opll
     wire opll_req_n; 
@@ -1587,18 +1601,32 @@ memory_ctrl mem1 (
 
     assign opll_req_n = ( bus_iorq_n == 1'b0 && bus_addr[7:1] == 7'b0111110  &&  bus_wr_n == 1'b0 )  ? 1'b0 : 1'b1;    // I/O:7C-7Dh   / OPLL (YM2413)
   
-    jt2413 opll(
-        .rst (~bus_reset_n),        // rst should be at least 6 clk&cen cycles long
-        .clk (clk_27m),        // CPU clock
-        .cen (clk_enable_3m6_27),        // optional clock enable, if not needed leave as 1'b1
+    // OPLL (YM2413). Comparacion jt2413 (jtopl) vs IKAOPLL (ciclo-exacto): activa una
+    // instancia y comenta la otra. Ambas exponen la misma interfaz y alimentan jt2413_wav
+    // (signed 16b), asi que la mezcla de audio de abajo no cambia.
+//    jt2413 opll(
+//        .rst (~bus_reset_n),        // rst should be at least 6 clk&cen cycles long
+//        .clk (clk_27m),        // CPU clock
+//        .cen (clk_enable_3m6_27),        // optional clock enable, if not needed leave as 1'b1
+//        .din (cpu_dout),
+//        .addr (bus_addr[0]),
+//        .cs_n (opll_req_n),
+//        .wr_n (1'b0),
+//        .snd (jt2413_wav),
+//        .sample   ( )
+//    );
+
+    opll_ikaopll opll(
+        .rst (~bus_reset_n),
+        .clk (clk_27m),
+        .cen (clk_enable_3m6_27),
         .din (cpu_dout),
         .addr (bus_addr[0]),
         .cs_n (opll_req_n),
         .wr_n (1'b0),
-        // combined output
         .snd (jt2413_wav),
-        .sample   ( )
-    ); 
+        .sample ( )
+    );
 
     //scc & ghost scc
     wire [14:0] scc_wav;
@@ -1709,16 +1737,39 @@ memory_ctrl mem1 (
     //reg [23:0] fm_wav;
     //reg [16:0] fm_mix;
     //reg [14:0] scc_wav2;
-	reg [15:0] audio_sample;
+    reg signed [15:0] audio_sample_pre;
+	reg signed [15:0] audio_sample;
+
+    // Mezcla de audio. MISMO BALANCE y MISMOS NIVELES que el original (OPLL x1, SCC x2,
+    // PSG x64 unipolar con silencio=0). Unico cambio: la suma se hace en 18 bits con signo
+    // y se SATURA a signed 16b, en vez de dejar que el desbordamiento diera la vuelta
+    // (wraparound = la distorsion fuerte). Ahora que el OPLL suena a buen nivel, OPLL+PSG
+    // puede pasar de fondo de escala; sin esto, esos picos se corrompian.
+    // (El PSG unipolar es un termino positivo; su DC lo elimina el acoplo AC del HDMI. NO se
+    //  le resta offset: en silencio vale 0. Restarlo metia un DC que recortaba el OPLL.)
+    wire signed [17:0] mix_opll = {{2{jt2413_wav[15]}}, jt2413_wav};   // x1  (signed)
+    wire signed [17:0] mix_scc  = {{2{scc_wav[14]}}, scc_wav, 1'b0};   // x2  (signed)
+    wire signed [17:0] mix_psg  = {4'b0, psgSound1, 6'b000000};        // x64 (0..16320, unipolar)
+    wire signed [17:0] mix_sum  = (map_sel[0] == 0) ? (mix_opll + mix_scc + mix_psg)
+                                                    : (mix_opll + mix_psg);
 
     always @ (posedge clk_27m) begin
         if (clk_enable_3m6_27 == 1 ) begin
-            if (map_sel[0] == 0)
-                audio_sample <= { 2'b0 , psgSound3 , 6'b000000 } + { scc_wav, 1'b0 } + jt2413_wav;
-            else
-                audio_sample <= { 2'b0 , psgSound3 , 6'b000000 } + jt2413_wav;
+            if      (mix_sum >  18'sd32767)  audio_sample_pre <= 16'h7FFF;   // satura a +full
+            else if (mix_sum < -18'sd32768)  audio_sample_pre <= 16'h8000;   // satura a -full
+            else                             audio_sample_pre <= mix_sum[15:0];
         end
     end
+
+     lpf_butter4_8k #(
+        .DW (16)
+    ) filter2 (
+        .clk (clk_27m),     // 27 MHz
+        .rst_n(bus_reset_n),
+        .en (1),      // fija en '1' si fs = 27 MHz
+        .x_in (audio_sample_pre),
+        .y_out (audio_sample)
+    );
 
 `else
 
@@ -1797,7 +1848,7 @@ memory_ctrl mem1 (
     wire config_enable_ghost_scc;
     reg config_enable_sdcard;
     wire config_enable_wait;
-    wire config_enable_turbo;
+    reg config_enable_turbo;
     reg config_reset_ff;
     reg config_flash_write_ff;
     reg config1_update;
@@ -1891,7 +1942,6 @@ memory_ctrl mem1 (
     assign config2_req = (config_ok == 1 && bus_addr[7:0] == 8'h42 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
     assign config_enable_scanlines = config1_ff[3];
     //assign config_keyboard = config2_ff[4:3];
-    assign config_enable_turbo = config2_ff[4];
     assign config_enable_wait = config2_ff[3];
     assign config_req = (bus_addr[7:4] == 4'h4 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1:0;
     assign config_dout = ( bus_addr[3:0] == 4'h0 ) ? config0_ff :
@@ -1907,6 +1957,7 @@ memory_ctrl mem1 (
             //config_megaram_slot_ff <= config1_ff[7:6];
             config_enable_sdcard <= config2_ff[0];
             config_sdcard_slot_ff <= config2_ff[2:1];
+            config_enable_turbo <= config2_ff[4];
         end
     end
     assign config_mapper_slot = config_mapper_slot_ff;
@@ -2522,7 +2573,6 @@ memory_ctrl mem1 (
         .bus_rd_n(ex_bus_rd_n),
         .bus_wr_n(ex_bus_wr_n),
         .send(send),
-
         .uart_tx(usb_uart_tx)
     );
 

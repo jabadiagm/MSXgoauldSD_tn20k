@@ -12,11 +12,22 @@ module memory_ctrl (
 	input wire [22:0] ram_addr,
 	input wire [7:0] vram_din,
 	input wire vram_write,
-	input wire [16:0] vram_addr,
+	input wire [17:0] vram_addr,
+	// F3 command cache: escritura VDP de PALABRA (32 bits) con mascara de byte.
+	//  vram_wide=1 -> el acceso de escritura usa vram_din_32 + vram_wmask (bit=0 escribe el
+	//  byte, bit=1 lo enmascara; misma polaridad que DQM y que la data_mask del cache).
+	//  vram_wide=0 -> comportamiento clasico (byte vram_din en el lane vram_addr[1:0]).
+	//  REQUISITO (igual que vram_addr): vram_wide/vram_din_32/vram_wmask deben ser estables
+	//  durante todo el acceso; el cache los mantiene registrados hasta el ack. La direccion
+	//  de un acceso wide debe ser alineada a palabra (vram_addr[1:0]=00).
+	input wire [31:0] vram_din_32,
+	input wire [3:0] vram_wmask,
+	input wire vram_wide,
     input wire bus_rfsh_n,
 	
 	output reg [7:0] ram_dout,
 	output reg [15:0] vram_dout,
+	output reg [31:0] vram_dout_32,   // F1 VRAM contigua: palabra de 4 bytes {X,X+1,X+2,X+3}
     output reg ram_busy,
 
     // Magic ports for SDRAM to be inferred
@@ -51,6 +62,12 @@ module memory_ctrl (
     assign O_sdram_addr = SdrAdr;
     assign IO_sdram_dq = SdrDat;
 
+
+    // VRAM 256K: selecciona la mitad (16 bits alta/baja) de la palabra SDRAM de 32 bits.
+    // vram_addr[17] = bit17 (banco alto/bajo). Con bit17=0 el comportamiento es el de 128K.
+    // La direccion VRAM es estable por diseno (el VDP la genera sincronizada con VideoDHClk/DLClk),
+    // asi que se usa combinacional (no hace falta latchear).
+    wire vram_half = vram_addr[17];
 
     reg [22:0] sdram_addr;
     wire sdram_read;
@@ -296,11 +313,30 @@ module memory_ctrl (
                                 SdrHLdq <= sdram_addr[0];
                             end
                         end
+                        else if( vram_wide == 1'b1 ) begin
+                            // F3 command cache: escritura de palabra con mascara de byte.
+                            // vram_wmask tiene la polaridad del DQM (0=escribe, 1=enmascara),
+                            // mapeo de lanes identico al read-latch: [0]->byte0([7:0])...[3]->byte3([31:24]).
+                            // Estable durante el acceso (registrado en el cache hasta el ack).
+                            SdrLdq  <= vram_wmask[0];   // byte0 ([ 7: 0])
+                            SdrUdq  <= vram_wmask[1];   // byte1 ([15: 8])
+                            SdrHLdq <= vram_wmask[2];   // byte2 ([23:16])
+                            SdrHUdq <= vram_wmask[3];   // byte3 ([31:24])
+                        end
                         else begin
-                            SdrUdq <= ~vram_addr[16];
-                            SdrLdq <=  vram_addr[16];
-                            SdrHUdq <= 1; //~ vram_addr[16];
-                            SdrHLdq <= 1; //vram_addr[16];
+                            // F1 VRAM contigua: byte-en-palabra = vram_addr[1:0] (igual que el
+                            // camino CPU de arriba). Escritura: enmascara todos menos el byte destino.
+                            if( vram_addr[1] == 0 ) begin
+                                SdrUdq  <= ~vram_addr[0];   // byte1 (addr[1:0]=01)
+                                SdrLdq  <=  vram_addr[0];   // byte0 (addr[1:0]=00)
+                                SdrHUdq <= 1'b1;
+                                SdrHLdq <= 1'b1;
+                            end else begin
+                                SdrUdq  <= 1'b1;
+                                SdrLdq  <= 1'b1;
+                                SdrHUdq <= ~vram_addr[0];   // byte3 (addr[1:0]=11)
+                                SdrHLdq <=  vram_addr[0];   // byte2 (addr[1:0]=10)
+                            end
                         end
                     end
                 end
@@ -333,7 +369,7 @@ module memory_ctrl (
                         SdrBa  <= sdram_addr[22:21];                         //-- bank A+B+C+D
                     end
                     else begin
-                        SdrAdr <= vram_addr[10:0];                   //-- vdp read/write
+                        SdrAdr <= vram_addr[12:2];                   //-- vdp read/write (F1 contigua: fila = word[10:0])
                         SdrBa  <= 2'b11;                                         //-- bank D
                     end
                 end
@@ -352,7 +388,7 @@ module memory_ctrl (
                     SdrAdr[7:0] <= sdram_addr[20:13];                                         //-- cpu read/write
                 end
                 else begin
-                    SdrAdr[7:0] <= { 3'b111, vram_addr[15:11] };
+                    SdrAdr[7:0] <= { 3'b111, vram_addr[17:13] };   //-- F1 contigua: columna = word[15:11]
                 end
             end
             default: ; //null;
@@ -373,7 +409,10 @@ module memory_ctrl (
                         SdrDat <= { ram_din, ram_din, ram_din, ram_din };                //-- "101"(cpu write)
                     end
                     else begin
-                        SdrDat <= { vram_din, vram_din, vram_din, vram_din };          //-- "111"(vdp write)
+                        //-- "111"(vdp write): byte clasico replicado x4 (DQM elige el lane), o
+                        //-- palabra completa del command cache (F3, DQM = vram_wmask).
+                        SdrDat <= (vram_wide == 1'b1) ? vram_din_32
+                                                      : { vram_din, vram_din, vram_din, vram_din };
                     end
                 end
             end
@@ -397,6 +436,15 @@ module memory_ctrl (
         if( ff_sdr_seq == 3'b101 ) begin
             ff_sdr_seq_6 <= 1;
         end
+    end
+    // F1 VRAM contigua: byte-en-palabra del acceso VDP, latcheado en la fase de COLUMNA (seq 010),
+    // donde vram_addr = la direccion del acceso (misma que usa la columna). El read-latch (seq
+    // 100/101) usa ESTE valor, no vram_addr[1:0] directo, porque el VDP puede haber avanzado
+    // vram_addr al siguiente acceso para entonces (glitches pequenos y fijos por byte erroneo).
+    reg [1:0] ff_vram_byte;
+    always @ ( posedge clk_108m ) begin
+        if( ff_sdr_seq == 3'b010 && video_dlclk != 1'b0 )
+            ff_vram_byte <= vram_addr[1:0];
     end
     reg SdrSta_4;
     always @ ( posedge clk_108m ) begin
@@ -433,7 +481,18 @@ module memory_ctrl (
     always @ ( posedge clk_108m ) begin
             if( ff_sdr_seq_5 == 1 || ff_sdr_seq_6 == 1 ) begin
                 if( SdrSta == 3'b110 ) begin                        //-- read vdp
-                    vram_dout <= { SdrDat[15:8], SdrDat[7:0] };
+                    // F1 VRAM contigua: palabra de 32 bits = 4 bytes {X,X+1,X+2,X+3}.
+                    //  vram_dout_32 = palabra completa (para F2: Y-test/fetch de sprite).
+                    //  vram_dout = par {byte@X+1, byte@X} seleccionado por ff_vram_byte
+                    //  (latcheado en seq 010). El VDP lo usa en posicion fija
+                    //  (PRAMDAT=[7:0], PRAMDATPAIR=[15:8]).
+                    vram_dout_32 <= SdrDat;
+                    case( ff_vram_byte )
+                        2'b00: vram_dout <= { SdrDat[15: 8], SdrDat[ 7: 0] };  // {byte1, byte0}
+                        2'b01: vram_dout <= { SdrDat[23:16], SdrDat[15: 8] };  // {byte2, byte1}
+                        2'b10: vram_dout <= { SdrDat[31:24], SdrDat[23:16] };  // {byte3, byte2}
+                        2'b11: vram_dout <= { SdrDat[ 7: 0], SdrDat[31:24] };  // {byte0(wrap,no usado), byte3}
+                    endcase
                 end
             end
     end
