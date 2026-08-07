@@ -35,7 +35,7 @@ Megaram is detected automatically by sofarun using default settings. When using 
 
 
 ## Configuration
-Config menu is showed pressing g during MSX logo. New improved menu is created by [nataliapc](https://github.com/nataliapc/msx_goauld_settings_menu)
+Config menu is showed pressing 'g' during MSX logo. New improved menu is created by [nataliapc](https://github.com/nataliapc/msx_goauld_settings_menu)
 
 ![Config](/pics/config6.png)
 
