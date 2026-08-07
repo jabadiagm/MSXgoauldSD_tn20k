@@ -46,7 +46,7 @@ Config menu is showed pressing g during MSX logo. New improved menu is created b
 * Megaram Slot: 3 by default. Change to 1 or 2 to get megaram in a not expanded slot. Physical slot will be disabled
 * Ghost SCC: Off by default. Enable to get sound from an SCC cartridge located in physical slot 1 or 2
 * Enable Scanlines: On by default. Disable to get a clean hdmi picture
-* Compatible Mode: On by default. Enable for use with external cartridges
+* Compatible Mode: Off by default. Enable if you experience crashes / unstabilities with external cartridges
 * Turbo: Off by default. Enable to use an internal high-speed clock. Recommended for internal SD use only
 * Save & Exit: store new config and continue, changes in mapper settings will be effective after pressing reset
 * Save & Reset: store new config and make software reset, changes will be immediate
@@ -55,6 +55,7 @@ Config menu is showed pressing g during MSX logo. New improved menu is created b
 * Reset from config menu is not compatible with some hardware. Use physical reset button when possible
 * Tape games fail: use poke -1,0
 * Carnivore C2+ and Megaflashrom SCC+ SD are not compatible with Compatible mode (yes, I know)
+* Wondertang is not compatible with Turbo mode
 * Wifi unreliable: place ESP at appropiate distance from Tang
 
 
