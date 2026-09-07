@@ -16,6 +16,7 @@ MSX2+ engine in Z80 socket. It turns one MSX into an MSX2+ by replacing Z80 proc
 * Kanji Level 1 & 2
 * Wifi support using ESP (experimental)
 
+**For 240p analog video support for consumer CRTs watch DirectVideo branch**
 
 ## Boards
 
