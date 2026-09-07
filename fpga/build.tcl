@@ -77,6 +77,7 @@ add_file src/hdmi/packet_picker.sv
 add_file src/hdmi/serializer.sv
 add_file src/hdmi/source_product_description_info_frame.sv
 add_file src/hdmi/tmds_channel.sv
+add_file src/vdp_hdmi_240p.v
 add_file src/impulse.v
 add_file src/lpf_butter4_8k.v
 add_file src/megaram.v

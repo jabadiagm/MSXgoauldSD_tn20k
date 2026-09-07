@@ -69,7 +69,12 @@ module VDP (
     output wire        PAL_MODE,
     input  wire        SPMAXSPR,
     output wire [10:0] CX,
-    output wire [10:0] CY
+    output wire [10:0] CY,
+    output wire        INTERLACE,
+    output wire        Y212,
+    output wire        HIGHRES,
+    output wire        PIC_WIN,
+    output wire        BORDER_Y
 );
 
 `include "vdp_package.vh"
@@ -442,6 +447,11 @@ module VDP (
     assign CX          = H_CNT;
     assign CY          = V_CNT;
     assign PAL_MODE    = VDPR9PALMODE;
+    assign INTERLACE   = REG_R9_INTERLACE_MODE;
+    assign Y212        = REG_R9_Y_DOTS;
+    assign HIGHRES     = VDPMODEISHIGHRES;
+    assign PIC_WIN     = PREWINDOW_Y;
+    assign BORDER_Y    = BWINDOW_Y;
 
     // bit17 solo activo en modo V9968 (= reg_vram256k_mode). En modo V9958 => 128K intacto.
     assign PRAMADR     = {IRAMADR[17] & W_V9968_MODE, IRAMADR[16:0]};
