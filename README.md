@@ -1,4 +1,4 @@
-# MSXgoauldSD_tn20k
+# MSXgoauldSD_tn20k (DirectVideo branch)
 MSX Goa'uld board with Tang Nano 20k and SD support
 
 ![V1.5_SMD](/pics/V1_5_smd.jpg)
@@ -16,6 +16,13 @@ MSX2+ engine in Z80 socket. It turns one MSX into an MSX2+ by replacing Z80 proc
 * Kanji Level 1 & 2
 * Wifi support using ESP (experimental)
 
+## DirectVideo 240p output
+
+Although the following inexpensive HDMI to VGA adapter is not documented to support 240p/480i input resolutions, there is actually a mode that makes it output a `15 kHz @ 59.9 Hz` sync RGBHV signal, compatible with consumer CRTs.
+
+![HDMI to VGA adapter](pics/17_DirectVideo_cheap_adapter.png)
+
+See [DirectVideo details](fpga/dv.md) to get more information.
 
 ## Boards
 
@@ -73,3 +80,16 @@ Programming is done in two steps:
 > [!WARNING]
 > Not yet fully working on all MSX!
 >
+
+## Build instructions
+
+```
+export LD_PRELOAD=$(LIBFONT_CONFIG)
+gw_sh build.tcl
+```
+
+## Flash Instructions
+
+```
+sudo openFPGALoader -b tangnano20k -f --verify impl/pnr/project.fs
+```
