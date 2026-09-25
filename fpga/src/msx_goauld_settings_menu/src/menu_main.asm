@@ -112,6 +112,9 @@
 
 	ei
 
+	ld   a, JOY_MASK				; Joystick bloqueado hasta soltarlo: el Trigger
+	ld   (var_joylock), a			; usado para entrar no debe activar una opcion
+
 ; ############## Main loop
 
 bucle_repaint_selection:
@@ -181,6 +184,9 @@ ONOFF_Y = ONOFF_Y + 2
 wait_for_a_key:
 	ei
 	halt
+	call read_joystick				; A = codigo de tecla equivalente o 0
+	or   a
+	jr   nz, .key_lateral
 	call CHSNS						; BIOS keyStatus
 	jr   z, wait_for_a_key
 	call CHGET						; BIOS readChar
@@ -446,6 +452,55 @@ set_settings:
 	out  (c),a
 	reti
 
+; Reads joystick 1 and translates it to a navigation key.
+; After a joystick event, that button must be released before any new event.
+; Output   : A  - VT_UP / VT_DOWN / VT_RIGHT / VT_SPACE, or 0 if no new event
+; Modifies : AF, B, E, HL
+read_joystick:
+	di
+	ld   a, 15						; PSG R#15: bit 6 = 0 -> joystick port 1
+	out  (PSG_ADDR), a
+	in   a, (PSG_READ)
+	and  #BF
+	out  (PSG_WRITE), a
+	ld   a, 14						; PSG R#14: joystick state (active low)
+	out  (PSG_ADDR), a
+	in   a, (PSG_READ)
+	ei
+	cpl
+	and  JOY_MASK
+	ld   b, a						; B = pressed buttons (1 = pressed)
+
+	ld   hl, var_joylock
+	ld   a, (hl)
+	and  b							; Locked button still pressed?
+	jr   nz, .joy_none
+	ld   (hl), a					; Released (or no lock): clear lock
+
+	ld   a, b
+	and  JOY_UP
+	ld   e, VT_UP
+	jr   nz, .joy_event
+	ld   a, b
+	and  JOY_DOWN
+	ld   e, VT_DOWN
+	jr   nz, .joy_event
+	ld   a, b
+	and  JOY_LEFT | JOY_RIGHT		; Both go to the lateral (slot) option
+	ld   e, VT_RIGHT
+	jr   nz, .joy_event
+	ld   a, b
+	and  JOY_TRIG
+	ret  z							; Nothing pressed: A = 0
+	ld   e, VT_SPACE
+.joy_event:
+	ld   (hl), a					; Lock the button that caused the event
+	ld   a, e
+	ret
+.joy_none:
+	xor  a
+	ret
+
 ; Prints characters from memory until a 0 is found.
 ; Input    : HL - The text address
 print_string:
@@ -495,7 +550,7 @@ print_selection:
 ; ############## Constants
 
 menuTitleStr:
-	.db "MSX Goa'uld Settings Menu v1.24",0
+	.db "MSX Goa'uld Settings Menu v1.3",0
 enableMapperStr:
 	.db "Enable Mapper",0
 enableMegaRamStr:
@@ -667,6 +722,7 @@ structs_end:
 	var_sdcslt: ds 1
 
 	var_currentStruct: ds 2
+	var_joylock: ds 1
 
 
 ; ############## MSX VT-52 Character Codes
@@ -680,3 +736,17 @@ VT_DOWN    equ	#1f		; 27,"B"	; Cursor down
 VT_SPACE   equ	#20		; Space
 VT_CLRSCR  equ	#0c		; 27,"E"	; Clear screen:	Clears the screen and moves the cursor to home
 VT_HOME    equ	#0b		; 27,"H"	; Cursor home:	Move cursor to the upper left corner.
+
+
+; ############## PSG / Joystick
+
+PSG_ADDR   equ	#a0
+PSG_WRITE  equ	#a1
+PSG_READ   equ	#a2
+
+JOY_UP     equ	#01		; PSG R#14 bit 0
+JOY_DOWN   equ	#02		; PSG R#14 bit 1
+JOY_LEFT   equ	#04		; PSG R#14 bit 2
+JOY_RIGHT  equ	#08		; PSG R#14 bit 3
+JOY_TRIG   equ	#10		; PSG R#14 bit 4 (Trigger 1)
+JOY_MASK   equ	JOY_UP | JOY_DOWN | JOY_LEFT | JOY_RIGHT | JOY_TRIG

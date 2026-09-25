@@ -547,7 +547,7 @@ end
     assign bus_iorq_disable = (
                                 0
                         `ifdef ENABLE_V9958
-                                || vdp_csr_n == 0 || vdp_csw_n == 0 
+                                || vdp_csr_n == 0 || vdp_csw_n == 0 || vdp_req_w_pre == 1
                         `endif 
                                 ) ? 1 : 0;
 
@@ -661,7 +661,7 @@ end
     //assign ex_bus_rd_n = ( bus_rd_n | ex_bus_rd_n_ff | bus_disable);
     assign ex_bus_rd_n = bus_rd_n;
     //assign ex_bus_wr_n = ( bus_wr_n | ex_bus_wr_n_ff | bus_disable);
-    assign ex_bus_wr_n = bus_wr_n;
+    assign ex_bus_wr_n = bus_wr_n | vdp_req_w_pre;
     assign ex_bus_iorq_n = ( bus_iorq_n | bus_iorq_disable );
     assign ex_bus_mreq_n = ( bus_mreq_n | bus_mreq_disable );
     assign io_active = ( state_iso != IDLE_ISO ) ? 1 : 0;
@@ -1241,6 +1241,7 @@ end
 	wire vdp_csw_n; //VDP write request
 	wire vdp_csr_n; //VDP read request	
     wire vdp_req;
+    wire vdp_req_w_pre;
     wire [7:0] vdp_dout;
     wire vdp_int;
     wire WeVdp_n;
@@ -1252,6 +1253,7 @@ end
     assign vdp_csw_n = ( (bus_addr[7:3] == 5'b10011 ) && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 0:1; // I/O:98-9Fh   / VDP (V9938/V9958/V9968: 9Ch = int flags)
     assign vdp_csr_n = ( (bus_addr[7:3] == 5'b10011 ) && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 0:1; // I/O:98-9Fh   / VDP (V9938/V9958/V9968: 9Ch = int flags)
     assign vdp_req = ~(vdp_csw_n & vdp_csr_n);
+    assign vdp_req_w_pre = ( (bus_addr[7:3] == 5'b10011 ) && bus_iorq_n == 0 && bus_m1_n == 1 && bus_data_reverse == 1)? 1:0; // I/O:98-9Fh   / VDP (V9938/V9958/V9968: 9Ch = int flags)
 
 `ifdef ENABLE_V9958
     vdp_top vdp4 (
