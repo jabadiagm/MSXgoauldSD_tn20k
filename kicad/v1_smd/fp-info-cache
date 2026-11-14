@@ -1,4 +1,4 @@
-20607107624053877
+20610677445487804
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -58071,6 +58071,20 @@ Through hole vertical IDC box header THT 2x25 2.54mm double row
 0
 50
 50
+Mis_huellas
+PinHeader_1x03_P2.54mm_SMD
+SMD pin header, 1x03, 2.54mm pitch, single row
+SMD pin header THT 1x03 2.54mm single row
+0
+3
+3
+Mis_huellas
+PinHeader_1x04_P2.54mm_SMD
+SMD straight pin header, 1x04, 2.54mm pitch, single row
+SMD pin header THT 1x04 2.54mm single row
+0
+4
+4
 Mis_huellas
 QMTECH_XC7A15T_35T
 Through hole straight pin header, 2x25, 2.54mm pitch, double rows

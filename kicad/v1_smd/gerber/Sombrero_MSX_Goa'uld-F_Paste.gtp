@@ -1,15 +1,23 @@
 G04 #@! TF.GenerationSoftware,KiCad,Pcbnew,(6.0.9)*
-G04 #@! TF.CreationDate,2025-04-02T09:35:11+02:00*
+G04 #@! TF.CreationDate,2026-07-25T08:57:22+02:00*
 G04 #@! TF.ProjectId,Sombrero_MSX_Goa'uld,536f6d62-7265-4726-9f5f-4d53585f476f,rev?*
 G04 #@! TF.SameCoordinates,Original*
 G04 #@! TF.FileFunction,Paste,Top*
 G04 #@! TF.FilePolarity,Positive*
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW (6.0.9)) date 2025-04-02 09:35:11*
+G04 Created by KiCad (PCBNEW (6.0.9)) date 2026-07-25 08:57:22*
 %MOMM*%
 %LPD*%
 G01*
 G04 APERTURE LIST*
+%ADD10R,1.700000X1.700000*%
+%ADD11O,1.700000X1.700000*%
 G04 APERTURE END LIST*
+D10*
+X151120000Y-128016000D03*
+D11*
+X148580000Y-128016000D03*
+X146040000Y-128016000D03*
+X143500000Y-128016000D03*
 M02*
